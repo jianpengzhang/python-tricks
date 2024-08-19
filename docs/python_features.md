@@ -210,3 +210,88 @@ class MyClass(metaclass=MyMeta):
   #     pass
   ```
   **解释**：ValidatingMeta 在类初始化时检查是否定义了 required_attr 属性，如果没有则抛出 TypeError 异常。
+
+## 3. @staticmethod和@classmethod
+
+在 Python 中，主要有三种方法：实例方法、类方法 (classmethod) 和 静态方法 (staticmethod)，这三者的区别在于它们的调用方式以及它们可以访问的对象和数据。
+
+#### 3.1 实例方法
+
+实例方法是定义在类中，并且在类的实例上调用的方法。它们可以访问实例属性和方法，并且默认第一个参数是 self，表示类的实例。
+
+**特性：**
+* 可以访问和修改实例属性；
+* 只能通过实例对象调用；
+
+**示例：**
+
+```python
+class MyClass:
+    def __init__(self, value):
+        self.value = value
+
+    def instance_method(self):
+        return f"Instance method called. Value is {self.value}"
+
+
+obj = MyClass(10)
+print(obj.instance_method())  # 输出: Instance method called. Value is 10
+```
+
+#### 3.2 类方法 (classmethod)
+
+类方法使用 @classmethod 装饰器来定义，默认第一个参数是 cls，表示类本身，而不是类的实例，类方法可以访问类属性和类方法，但不能直接访问实例属性。
+
+**特性：**
+* 不能访问实例属性，但可以访问类属性；
+* 可以通过类或实例调用；
+
+**示例：**
+
+```python
+class MyClass:
+    class_variable = "Class level variable"
+
+    @classmethod
+    def class_method(cls):
+        return f"Class method called. {cls.class_variable}"
+
+
+print(MyClass.class_method())  # 通过类调用，输出: Class method called. Class level variable
+
+obj = MyClass()
+print(obj.class_method())  # 也可以通过实例调用
+```
+
+#### 3.3 静态方法 (staticmethod)
+
+静态方法使用 @staticmethod 装饰器来定义，静态方法没有默认参数，它既不需要访问实例属性，也不需要访问类属性。因此，静态方法与普通的函数基本没有区别，只是它们被包含在类的命名空间中。
+
+**特性：**
+* 不能访问实例属性或类属性；
+* 可以通过类或实例调用；
+
+**示例：**
+
+```python
+class MyClass:
+    @staticmethod
+    def static_method():
+        return "Static method called."
+
+
+print(MyClass.static_method())  # 通过类调用，输出: Static method called.
+
+obj = MyClass()
+print(obj.static_method())  # 也可以通过实例调用
+```
+
+#### 3.4 区别总结
+
+| \\                 | 实例方法                                      | 类方法                                                               | 静态方法                                                             |
+|:-------------------|:------------------------------------------|:------------------------------------------------------------------|:-----------------------------------------------------------------|
+| 区别                 | - 第一个参数是 self，表示实例本身；<br/> - 可以访问实例属性和方法； | - 使用 @classmethod 装饰，第一个参数是 cls，表示类本身；<br/> - 可以访问类属性，不能直接访问实例属性； | - 使用 @staticmethod 装饰，没有默认参数；<br/> - 不能访问类属性或实例属性，仅与类有逻辑关系的独立方法； |
+| 调用形式：obj=MyClass() | obj.instance_method()                     | obj.class_method()                                                | obj.static_method()                                              |
+| 调用形式：MyClass | 不可用                                       | MyClass.class_method()                                            | MyClass.static_method()                                          |
+| 使用场景               | 用于需要访问或修改实例状态的操作；                         | 用于需要访问类属性或执行一些与类有关的操作，而不需要实例化类的场景；                                | 用于独立于实例或类状态，但与类逻辑相关的操作；                                          |
+
