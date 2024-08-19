@@ -540,3 +540,139 @@ print(obj.attribute)  # 输出: 100
 
 * 问题 3：编写代码，动态导入模块并调用其中的函数。
   答：使用 `__import__()` 动态导入模块，并调用其中的函数，如 module.sqrt(16)。
+
+## 6. 列表、字典、集合推导式
+
+推导式是 Python 中非常强大的语法工具，允许我们以简洁的方式生成和操作列表、字典以及集合。
+
+#### 6.1 列表推导式（List Comprehension）
+
+**（1）基本语法**
+
+列表推导式的基本语法形式如下：
+
+```text
+[expression for item in iterable if condition]
+```
+
+* `expression`：对每个 item 执行的表达式，可以是任意操作，用于计算新列表的每个元素；
+* `item`：从 iterable(可迭代对象) 中获取的元素；
+* `iterable`：要迭代的对象，例如列表、元组、字符串等；
+* `condition（可选）`：可选过滤条件，只有满足条件的元素才会被包含在生成的列表中；
+
+**（2）示例**
+
+```python
+# 创建一个包含 0 到 9 的平方的列表
+squares = [x**2 for x in range(10)]
+print(squares)  # 输出: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+# 过滤出偶数的平方
+even_squares = [x**2 for x in range(10) if x % 2 == 0]
+print(even_squares)  # 输出: [0, 4, 16, 36, 64]
+
+# 使用嵌套的推导式来处理二维或多维结构：创建一个 3x3 的矩阵
+# 外层推导式负责生成矩阵的行，内层推导式生成行中的每个元素
+matrix = [[i * j for j in range(3)] for i in range(3)]
+print(matrix)  # 输出: [[0, 0, 0], [0, 1, 2], [0, 2, 4]]
+
+# 使用列表推导式将一个二维列表展开为一维列表
+matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+flatten_matrix = [x for row in matrix for x in row]
+print(flatten_matrix)  # 输出：[1, 2, 3, 4, 5, 6, 7, 8, 9]
+```
+
+#### 6.2 字典推导式（Dict Comprehension）
+
+**（1）基本语法**
+
+字典推导式的基本语法形式如下：
+
+```text
+{key_expression: value_expression for item in iterable if condition}
+```
+
+* `key_expression`：字典键的表达式；
+* `value_expression`：字典值的表达式；
+* `item`：从 iterable(可迭代对象) 中获取的元素；
+* `iterable`：要迭代的对象，例如列表、元组等；
+* `condition（可选）`：可选过滤条件，只有满足条件的元素才会被包含在生成的字典中；
+
+**（2）示例**
+
+```python
+# 创建一个字典，键是 0 到 9，值是它们的平方
+square_dict = {x: x**2 for x in range(10)}
+print(square_dict)  # 输出: {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25, 6: 36, 7: 49, 8: 64, 9: 81}
+
+# 过滤出偶数的平方
+even_square_dict = {x: x**2 for x in range(10) if x % 2 == 0}
+print(even_square_dict)  # 输出: {0: 0, 2: 4, 4: 16, 6: 36, 8: 64}
+
+# 反转字典的键和值
+original_dict = {'a': 1, 'b': 2, 'c': 3}
+inverted_dict = {v: k for k, v in original_dict.items()}
+print(inverted_dict)  # 输出: {1: 'a', 2: 'b', 3: 'c'}
+
+# 从元组列表中创建一个字典
+tuples = [(1, 'a'), (2, 'b'), (3, 'c')]
+dictionary = {k: v for k, v in tuples}
+print(dictionary)  # 输出：{1: 'a', 2: 'b', 3: 'c'}
+```
+
+#### 6.3 集合推导式（Set Comprehension）
+
+集合推导式类似于列表推导式和字典推导式，但生成的结果是一个集合。集合是无序且不允许重复元素的，因此集合推导式会自动去除重复元素。
+
+**（1）基本语法**
+
+集合推导式的基本语法形式如下：
+```text
+{expression for item in iterable if condition}
+```
+
+* `expression`：对每个 item 执行的表达式；
+* `item`：从 iterable(可迭代对象) 中获取的元素；
+* `iterable`：要迭代的对象，例如列表、元组、字符串等；
+* `condition（可选）`：可选过滤条件，只有满足条件的元素才会被包含在生成的集合中；
+
+**（2）示例**
+```python
+# 创建一个包含 0 到 9 的平方的集合
+squares_set = {x ** 2 for x in range(10)}
+print(squares_set)  # 输出: {0, 1, 4, 9, 16, 25, 36, 49, 64, 81}
+
+# 去除列表中的重复元素：由于集合是无序且不重复的，集合推导式非常适合用于去除重复元素
+numbers = [1, 2, 2, 3, 4, 4, 5]
+unique_numbers = list({x for x in numbers})
+print(unique_numbers)  # 输出：[1, 2, 3, 4, 5]
+
+# 创建一个集合，包含 0 到 9 中的偶数的平方
+even_squares_set = {x ** 2 for x in range(10) if x % 2 == 0}
+print(even_squares_set)  # 输出：{0, 64, 4, 36, 16}
+```
+
+**（3）常见面试题**
+
+```python
+# 问题 1：如何使用列表推导式生成一个包含从 1 到 10 的所有偶数的列表
+q_list1 = [x for x in range(1, 11) if x % 2 == 0]
+print(q_list1)  # [2, 4, 6, 8, 10]
+
+# 问题 2：如何使用字典推导式生成一个字典，其中键是 1 到 5 的数字，值是这些数字的立方？
+q_dict1 = {x: x ** 3 for x in range(1, 6)}
+print(q_dict1)  # {1: 1, 2: 8, 3: 27, 4: 64, 5: 125}
+
+# 问题 3：如何使用推导式生成一个二维列表（如 3x3 的矩阵），并请解释其中的每一步操作？
+q_list2 = [[i * j for i in range(3)] for j in range(3)]  # 外层推导式负责生成矩阵的行，内层推导式生成行中的每个元素。
+print(q_list2)  # [[0, 0, 0], [0, 1, 2], [0, 2, 4]]
+
+# 问题 4：如何使用集合推导式生成一个包含从 1 到 10 的所有偶数的集合？
+q_set1 = {x for x in range(1, 11) if x % 2 == 0}
+print(q_set1)  # {2, 4, 6, 8, 10}
+
+# 问题 5：如何使用集合推导式从一个列表中去除重复元素，并将每个元素的平方值存储在集合中？
+nums = [1, 2, 2, 3, 4, 4, 5]
+q_set2 = {x ** 2 for x in nums}
+print(q_set2)  # {1, 4, 9, 16, 25}
+```
