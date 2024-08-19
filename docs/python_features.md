@@ -295,3 +295,135 @@ print(obj.static_method())  # 也可以通过实例调用
 | 调用形式：MyClass | 不可用                                       | MyClass.class_method()                                            | MyClass.static_method()                                          |
 | 使用场景               | 用于需要访问或修改实例状态的操作；                         | 用于需要访问类属性或执行一些与类有关的操作，而不需要实例化类的场景；                                | 用于独立于实例或类状态，但与类逻辑相关的操作；                                          |
 
+
+
+## 4. 类变量和实例变量
+
+#### 4.1 类变量（Class Variables）
+
+类变量是在类内部声明（但在任何方法之外）定义的变量，它们在类的所有实例之间共享。换句话说，类变量对于每个实例都是相同的，修改类变量的值会影响所有实例。
+
+**特性：**
+* 属于类本身，而不是某个实例；
+* 在类的所有实例之间共享；
+* 可以通过类名或实例名访问，但通常使用类名访问更为直观；
+
+**示例：**
+
+```python
+class MyClass:
+    class_variable = "I am a class variable"
+
+
+# 创建两个实例
+obj1 = MyClass()
+obj2 = MyClass()
+
+# 通过类名访问类变量
+print(MyClass.class_variable)  # 输出: I am a class variable
+
+# 通过实例访问类变量
+print(obj1.class_variable)  # 输出: I am a class variable
+print(obj2.class_variable)  # 输出: I am a class variable
+
+# 修改类变量
+MyClass.class_variable = "New class value"
+
+print(obj1.class_variable)  # 输出: New class value
+print(obj2.class_variable)  # 输出: New class value
+```
+
+#### 4.2 实例变量（Instance Variables）
+
+实例变量是在类的 __init__ 方法中，或者其他实例方法中使用 self 关键字定义的变量。实例变量的值对于每个实例来说都是独立的，不同实例的实例变量可以有不同的值。
+
+**特性：**
+* 属于类的实例，而不是类本身;
+* 每个实例都有自己独立的实例变量;
+* 只能通过实例访问;
+
+**示例：**
+
+```python
+class MyClass:
+    def __init__(self, value):
+        self.instance_variable = value  # 定义实例变量
+
+
+# 创建两个实例
+obj1 = MyClass("Object 1")
+obj2 = MyClass("Object 2")
+
+# 访问实例变量
+print(obj1.instance_variable)  # 输出: Object 1
+print(obj2.instance_variable)  # 输出: Object 2
+
+# 修改实例变量
+obj1.instance_variable = "New value for Object 1"
+
+print(obj1.instance_variable)  # 输出: New value for Object 1
+print(obj2.instance_variable)  # 输出: Object 2
+```
+
+#### 4.3 类变量与实例变量的区别
+
+* 作用域：类变量属于类，实例变量属于实例；
+* 共享性：类变量在所有实例之间共享，实例变量是独立的；
+* 访问方式：类变量可以通过类名或实例名访问，但实例变量只能通过实例名访问；
+* 生命周期：类变量的生命周期与类相同，实例变量的生命周期与实例相同；
+
+#### 4.4 注意事项（避免混淆）
+
+在 Python 中，当类变量是一个可变对象（如列表、字典、集合等）时，通过实例修改类变量的行为会与不可变对象（如整数、字符串、元组等）有所不同。这是由于 Python 中对象的可变性和引用机制所导致的（如第一章节）。
+
+#### 4.4.1 类变量 —— 不可变对象
+
+对于不可变对象（如整数、字符串、元组等），如果通过实例对类变量进行赋值（修改）操作，Python 会在实例的命名空间中创建一个新的同名实例变量，而不会修改类变量。例如：
+
+```python
+class MyClass:
+    class_variable = "Class variable"
+
+
+obj = MyClass()
+
+# 通过实例赋值操作修改类变量（实际是创建了一个实例变量）
+obj.class_variable = "Modified by instance"
+
+print(obj.class_variable)  # 输出: Modified by instance
+print(MyClass.class_variable)  # 输出: Class variable
+```
+
+在这个例子中，obj.class_variable = "Modified by instance" 实际上在 obj 的实例命名空间中创建了一个新的实例变量 class_variable，而类变量 MyClass.class_variable 并未受到影响。
+
+#### 4.4.2 类变量 —— 可变对象
+
+当类变量是一个可变对象（如列表）时，通过实例对其进行修改操作（例如添加元素、修改元素）时，由于可变对象是通过引用传递的，所有引用该类变量的实例都会看到修改后的值。这就意味着，即使是通过实例来修改类变量，它实际影响的是类变量本身，而不会在实例命名空间中创建新的变量。
+
+示例：
+
+```python
+class MyClass:
+    class_variable = []  # 类变量是一个列表
+
+    def __init__(self, value):
+        self.instance_variable = value
+
+
+obj1 = MyClass("Instance 1")
+obj2 = MyClass("Instance 2")
+
+# 通过实例修改类变量（实际是修改类变量本身）
+obj1.class_variable.append(1)
+
+print(obj1.class_variable)  # 输出: [1]
+print(obj2.class_variable)  # 输出: [1]
+print(MyClass.class_variable)  # 输出: [1]
+```
+
+#### 4.4.3 总结
+
+* 不可变对象：通过实例修改类变量时，会在实例命名空间中创建一个新的实例变量，类变量不会被修改；
+* 可变对象：通过实例修改类变量时，由于修改的是引用对象，类变量本身会被修改，所有实例都能看到修改后的结果；
+
+因此，在使用类变量作为可变对象时，需要小心其共享特性，以避免意外修改影响所有实例。如果希望每个实例都有自己的独立副本，通常应该在 __init__ 方法中初始化该变量为实例变量，而不是使用类变量。同时，建议通过类名访问和修改类变量避免混淆。
