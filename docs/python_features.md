@@ -97,7 +97,7 @@ class MyClass(metaclass=MyMeta):
 
 运行输出："Creating class MyClass"
 
-这里 "MyMeta" 是一个元类，它重载了 "__new__" 方法，在创建类时会输出一条信息，“MyClass” 使用这个元类，因此在它被创建时，“MyMeta” 的 “__new__” 方法被调用。
+这里 "MyMeta" 是一个元类，它重载了 `__new__` 方法，在创建类时会输出一条信息，“MyClass” 使用这个元类，因此在它被创建时，“MyMeta” 的 `__new__` 方法被调用。
 
 **元类的常见方法：**
 
@@ -163,11 +163,11 @@ class MyClass(metaclass=MyMeta):
     print(obj1.value)  # 1
     print(obj2.value)  # 1
   ```
-  **解释**："SingletonMeta" 是一个元类，通过重载 "__call__" 方法来确保每次实例化类时，返回的都是同一个实例。
+  **解释**："SingletonMeta" 是一个元类，通过重载 `__call__` 方法来确保每次实例化类时，返回的都是同一个实例。
 
 * 面试题 3: 如何通过元类自动向类添加方法？  
   **解答**：  
-  可以通过重载元类的 "__new__" 方法，在类创建时自动向其添加方法。
+  可以通过重载元类的 `__new__` 方法，在类创建时自动向其添加方法。
   ```python
   class AutoMethodMeta(type):
       def auto_method_print_a(self):
@@ -187,11 +187,11 @@ class MyClass(metaclass=MyMeta):
   obj.auto_method_print_a()
   print(obj.auto_method())  # This is an auto-generated method.
   ```
-  **解释**：在 "AutoMethodMeta" 中，通过 "__new__" 方法向类添加了一个名为 "auto_method"、“auto_method_print_a” 方法，因此每个使用该元类的类都会自动拥有这两个方法。
+  **解释**：在 "AutoMethodMeta" 中，通过 `__new__` 方法向类添加了一个名为 "auto_method"、“auto_method_print_a” 方法，因此每个使用该元类的类都会自动拥有这两个方法。
 
   * 面试题 4: 如何使用元类对类属性进行验证？  
   **解答**：  
-  可以在元类的 “__init__” 方法中进行属性验证，确保类在创建时符合某些规则。
+  可以在元类的 `__init__` 方法中进行属性验证，确保类在创建时符合某些规则。
  
   ```python
   class ValidatingMeta(type):
@@ -295,8 +295,6 @@ print(obj.static_method())  # 也可以通过实例调用
 | 调用形式：MyClass | 不可用                                       | MyClass.class_method()                                            | MyClass.static_method()                                          |
 | 使用场景               | 用于需要访问或修改实例状态的操作；                         | 用于需要访问类属性或执行一些与类有关的操作，而不需要实例化类的场景；                                | 用于独立于实例或类状态，但与类逻辑相关的操作；                                          |
 
-
-
 ## 4. 类变量和实例变量
 
 #### 4.1 类变量（Class Variables）
@@ -335,7 +333,7 @@ print(obj2.class_variable)  # 输出: New class value
 
 #### 4.2 实例变量（Instance Variables）
 
-实例变量是在类的 __init__ 方法中，或者其他实例方法中使用 self 关键字定义的变量。实例变量的值对于每个实例来说都是独立的，不同实例的实例变量可以有不同的值。
+实例变量是在类的 `__init__` 方法中，或者其他实例方法中使用 self 关键字定义的变量。实例变量的值对于每个实例来说都是独立的，不同实例的实例变量可以有不同的值。
 
 **特性：**
 * 属于类的实例，而不是类本身;
@@ -426,4 +424,119 @@ print(MyClass.class_variable)  # 输出: [1]
 * 不可变对象：通过实例修改类变量时，会在实例命名空间中创建一个新的实例变量，类变量不会被修改；
 * 可变对象：通过实例修改类变量时，由于修改的是引用对象，类变量本身会被修改，所有实例都能看到修改后的结果；
 
-因此，在使用类变量作为可变对象时，需要小心其共享特性，以避免意外修改影响所有实例。如果希望每个实例都有自己的独立副本，通常应该在 __init__ 方法中初始化该变量为实例变量，而不是使用类变量。同时，建议通过类名访问和修改类变量避免混淆。
+因此，在使用类变量作为可变对象时，需要小心其共享特性，以避免意外修改影响所有实例。如果希望每个实例都有自己的独立副本，通常应该在 `__init__` 方法中初始化该变量为实例变量，而不是使用类变量。同时，建议通过类名访问和修改类变量避免混淆。
+
+## 5. Python 自省
+
+Python 自省（Introspection）是指在运行时检查对象的能力。通过自省，Python 程序可以在运行时动态获取对象的类型、属性、方法、父类、模块等信息。自省机制使 Python 具有强大的动态性，能够根据当前对象的状态进行相应的操作。
+
+#### 5.1 自省主要功能
+
+#### 5.1.1 获取对象类型
+
+* `type()`：用于获取对象的类型；
+* `isinstance()`：检查对象是否是某个类的实例；
+* `issubclass()`：检查一个类是否是另一个类的子类；
+
+```python
+x = 42
+print(type(x))  # 输出: <class 'int'>
+print(isinstance(x, int))  # 输出: True
+
+class A: pass
+
+class B(A): pass
+
+print(issubclass(B, A))  # 输出: True
+```
+
+#### 5.1.2 获取对象属性和方法
+
+* `dir()`：返回对象的所有属性和方法名列表；
+* `hasattr()`：检查对象是否具有某个属性或方法；
+* `getattr()`：获取对象的某个属性或方法；
+* `setattr()`：设置对象的某个属性或方法；
+* `vars()`：返回对象的 `__dict__` 属性，即对象的属性字典；
+
+```python
+class MyClass:
+    def __init__(self):
+        self.value = 10
+
+    def method(self):
+        return self.value
+
+
+obj = MyClass()
+
+print(dir(obj))  # 输出: ['__class__', '__delattr__', '__dict__', '__dir__', ... 'value']
+print(hasattr(obj, 'value'))  # 输出: True
+print(getattr(obj, 'value'))  # 输出: 10
+
+setattr(obj, 'value', 20)
+print(obj.value)  # 输出: 20
+
+print(vars(obj))  # 输出: {'value': 20}
+```
+
+#### 5.1.3 获取类的层次结构
+
+* `__bases__`：用于获取类的基类（父类）；
+* `__mro__`：返回类的继承层次结构；
+
+```python
+class A: pass
+
+class B(A): pass
+
+print(B.__bases__)  # 输出: (<class '__main__.A'>,)
+print(B.__mro__)  # 输出: (<class '__main__.B'>, <class '__main__.A'>, <class 'object'>)
+```
+
+#### 5.1.4  检查模块和包的内容
+
+* `__name__`：获取模块或包的名称；
+* `__file__`：获取模块的文件路径；
+* `__doc__`：获取模块、类或函数的文档字符串（docstring）；
+
+```python
+import os
+
+print(os.__name__)  # 输出: os
+print(os.__file__)  # 输出: 文件路径
+print(os.__doc__)  # 输出: os 模块的文档字符串
+```
+
+#### 5.2 自省应用场景
+
+#### 5.2.1 动态导入模块
+
+根据条件动态导入模块，并调用其中的函数或方法：
+
+```python
+module_name = 'math'
+module = __import__(module_name)
+
+print(module.sqrt(16))  # 输出: 4.0
+```
+
+#### 5.2.2 动态生成类
+
+使用 type() 动态创建类，type() 是一个类的元类（metaclass），可以用来创建新的类：
+
+```python
+MyDynamicClass = type('MyDynamicClass', (object,), {'attribute': 100})
+
+obj = MyDynamicClass()
+print(obj.attribute)  # 输出: 100
+```
+
+#### 5.3 面试示例
+* 问题 1：什么是 Python 自省？请举例说明：
+  答：自省是指在运行时检查对象的能力。示例：可以是使用 type() 获取对象类型，使用 dir() 列出对象的属性和方法。
+
+* 问题 2：如何在 Python 中动态获取对象的所有属性？
+  答：可以使用 dir() 函数列出对象的所有属性和方法，也可以使用 vars() 获取对象的属性字典。
+
+* 问题 3：编写代码，动态导入模块并调用其中的函数。
+  答：使用 `__import__()` 动态导入模块，并调用其中的函数，如 module.sqrt(16)。
