@@ -931,3 +931,144 @@ print(repr(obj))  # 输出: MyClass('example', 42)
 # >>> obj
 # MyClass('example', 42)
 ```
+
+## 9. 字符串格式化 & 拼接
+
+在 Python 中，字符串格式化 & 拼接有几种常用方式。
+
+#### 9.1 使用 "%" 操作符
+
+这是最早的字符串格式化方法（Python 2.6 以前），通过 “%” 符号替代字符串中的占位符，常用占位符有 %s（字符串）、%d（整数）、%f（浮点数）等。
+
+示例：
+
+```python
+name = "Alice"
+age = 30
+formatted_string = "Name: %s, Age: %d" % (name, age)
+print(formatted_string)  # 输出: Name: Alice, Age: 30
+
+names = ["Alice", "Paddy", "Joie"]
+average_age = 30
+formatted_string = "Names: %s" % names
+print(formatted_string)  # 输出：Names: ['Alice', 'Paddy', 'Joie']
+
+formatted_string = "Names: %s, Average Age: %d" % (names, age)
+print(formatted_string)  # 输出：Names: ['Alice', 'Paddy', 'Joie'], Average Age: 30
+
+names = ("Alice", "Paddy", "Joie")
+# formatted_string = "Names: %s" % names
+# print(formatted_string)  # 输出：TypeError: not all arguments converted during string formatting
+formatted_string = "Names: %s" % (names,)
+print(formatted_string)  # 输出：Names: ('Alice', 'Paddy', 'Joie')
+```
+
+**优点**：简单易用，适合处理简单的字符串格式化;  
+**缺点**：不支持复杂的数据结构或格式化选项;
+
+#### 9.2 使用 "str.format()" 方法
+
+"str.format()" 提供了更强大的格式化功能，可以通过位置或关键字参数指定占位符，并且支持丰富的格式化选项。
+
+示例：
+
+```python
+name = "Alice"
+age = 30
+formatted_string = "Name: {}, Age: {}".format(name, age)
+print(formatted_string)  # 输出: Name: Alice, Age: 30
+
+# 关键字参数
+formatted_string = "Name: {name}, Age: {age}".format(age=age, name=name)
+print(formatted_string)  # 输出: Name: Alice, Age: 30
+
+# 格式化选项
+pi = 3.14159
+formatted_string = "Pi is approximately {:.2f}".format(pi)  # 保留两位小数
+print(formatted_string)  # 输出: Pi is approximately 3.14
+```
+
+**优点**：功能强大，支持复杂的格式化和嵌套数据结构；  
+**缺点**：语法较繁琐，格式字符串容易变得冗长；  
+
+#### 9.3 使用 "f-strings" (Python 3.6+)
+
+"f-strings" 是 Python 3.6 引入的一种格式化字符串的方式，语法简洁、直观，直接在字符串中嵌入变量和表达式。
+
+示例：
+
+```python
+name = "Alice"
+age = 30
+formatted_string = f"Name: {name}, Age: {age}"
+print(formatted_string)  # 输出: Name: Alice, Age: 30
+
+# 嵌入表达式：
+pi = 3.14159
+formatted_string = f"Pi is approximately {pi:.2f}"  # 保留两位小数
+print(formatted_string)  # 输出: Pi is approximately 3.14
+```
+
+**优点**：简洁、直观、性能高，可嵌入表达式，支持多行字符串;  
+**缺点**：仅在 Python 3.6 及以上版本可用;
+
+#### 9.4 使用 "string.Template"
+
+"string.Template" 提供了一种安全的字符串替换方法，特别适合从不可信的数据源构建字符串。
+
+示例：
+
+```python
+from string import Template
+
+template = Template("Name: $name, Age: $age")
+formatted_string = template.substitute(name='Alice', age=30)
+print(formatted_string)  # 输出: Name: Alice, Age: 30
+
+# 安全替换：
+template = Template("Name: $name, Age: $age")
+formatted_string = template.safe_substitute(name="Alice")
+print(formatted_string)  # 输出: Name: Alice, Age: $age (age 没有提供值)
+```
+**优点**：安全性高，适用于处理用户输入数据;  
+**缺点**：功能有限，不支持复杂的表达式或高级格式化选项;  
+
+#### 9.5 其他简单字符串拼接
+
+* 通过 "+" 号的形式：
+
+  ```python
+  a, b = 'Hello', ' World!'
+  c = a + b
+  print(a + b)  # Hello World!
+  print(c)  # Hello World!
+  ```
+  
+* 通过 "," 号的形式：
+
+  ```python
+  a, b = 'Hello', ' World!'
+  print(a, b)  # Hello  World!
+  ```
+
+* 直接连接：
+
+  ```python
+  print('Hello'         ' World!')  # Hello World!
+  print('Hello'' World!')  # Hello World!
+  ```
+* 使用 “join” 内置方法：
+
+  字符串有一个内置方法 "join"，其参数是一个序列类型，例如数组或者元组等。
+  
+  ```python
+  print(' '.join(['Hello', 'World!']))  # Hello World!
+  print(''.join(['Hello', 'World!']))  # HelloWorld!
+  ```
+
+* 使用 "*" 操作符：
+
+  ```python
+  a = 'Hello World!'
+  print(a * 3)  # Hello World!Hello World!Hello World!
+  ```
