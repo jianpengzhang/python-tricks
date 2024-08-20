@@ -978,6 +978,9 @@ age = 30
 formatted_string = "Name: {}, Age: {}".format(name, age)
 print(formatted_string)  # 输出: Name: Alice, Age: 30
 
+names = ("Alice", "Paddy", "Joie")
+print('{0} {2} {1} {2} {2} {2}'.format(*names))  # Alice Joie Paddy Joie Joie Joie
+
 # 关键字参数
 formatted_string = "Name: {name}, Age: {age}".format(age=age, name=name)
 print(formatted_string)  # 输出: Name: Alice, Age: 30
@@ -986,6 +989,7 @@ print(formatted_string)  # 输出: Name: Alice, Age: 30
 pi = 3.14159
 formatted_string = "Pi is approximately {:.2f}".format(pi)  # 保留两位小数
 print(formatted_string)  # 输出: Pi is approximately 3.14
+
 ```
 
 **优点**：功能强大，支持复杂的格式化和嵌套数据结构；  
