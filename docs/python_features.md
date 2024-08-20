@@ -821,3 +821,113 @@ print(obj)  # 输出: MyClass with value 10
 * 问题 3：\__init\__ 和 \__str\__ 的作用是什么？  
   `__init__`：是类的构造函数，用于初始化对象；  
   `__str__`：是用于定义对象的字符串表示形式，当使用 print 或 str() 调用对象时会被调用；
+
+## 8. Python \"_\_str__" vs. \"_\_repr__"
+
+在 Python 中，`__str__` 和 `__repr__` 是两个用于对象字符串表示的特殊方法（魔术方法），它们虽然都用于返回对象的字符串表示，但在语义和用途上有所不同。
+
+#### 8.1 \"_\_str__"
+
+通过 str(object) 以及内置函数 format() 和 print() 调用以生成一个对象的 “非正式” 或格式良好的字符串表示，返回值必须是字符串对象。
+
+示例：
+
+```python
+class MyClass:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __str__(self):
+        # 重写 __str__ 自定义输出
+        return f"MyClass(name={self.name}, value={self.value})"
+
+obj = MyClass("example", 42)
+print(obj)  # 输出: MyClass(name=example, value=42)
+```
+
+#### 8.2 \"_\_repr__"
+
+由 repr() 内置函数调用，用来输出一个对象的 “官方” 字符串表示，返回值必须是字符串对象，此方法通常被用于调试，内置类型 object 所定义的默认实现会调用 `object.__repr__()`。
+
+示例：
+
+```python
+class MyClass:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        # 重写 __repr__ 自定义输出
+        return f"MyClass({repr(self.name)}, {repr(self.value)})"
+
+obj = MyClass("example", 42)
+print(repr(obj))  # 输出: MyClass('example', 42)
+```
+
+#### 8.3 "\_\_str__" vs. "\_\_repr__"
+
+如上所述：
+
+* `__repr__()`: 为开发者提供对象的正式字符串表示。另一重要特性是：开发者通常可以用它来重新创建一个与原始对象相同的对象；
+* `__str__()`: 为用户提供对象的非正式字符串表示。即，任何用户都能理解对象中包含的数据，对用户来说更简单、更容易阅读；
+
+示例：
+
+```
+>>> import datetime
+>>> today = datetime.datetime.now()
+>>> str(today)
+'2024-08-20 14:34:13.765650'
+>>> repr(today)
+'datetime.datetime(2024, 8, 20, 14, 34, 13, 765650)'
+>>> 
+>>> 
+>>> new_date = datetime.datetime(2024, 8, 20, 14, 34, 13, 765650)
+>>> new_date == today
+True
+>>> new_date = 2024-08-20 14:34:13.765650
+  File "<stdin>", line 1
+    new_date = 2024-08-20 14:34:13.765650
+                    ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers
+```
+
+**总结:**
+
+主要目的：
+* `__str__`：返回用户友好的描述性字符串;
+* `__repr__`：返回开发者友好的、精确的表示（通常是对象的“官方”表示，便于调试）;
+
+默认行为：
+* 如果没有定义 `__str__`，调用 str() 或 print() 时，会尝试调用 `__repr__`;
+* 如果没有定义 `__repr__`，则使用默认的 `__repr__` 实现，返回类似 <__main__.MyClass object at 0x000001> 的字符串，显示对象的类型和内存地址;
+
+何时实现：
+* `__repr__` 更适合用于调试和开发，通常尽量实现一个能返回有效 Python 表达式的 `__repr__`;
+* `__str__` 更适合用于展示给最终用户，可以实现为一个简洁、友好的字符串表示;
+
+示例对比:
+
+```python
+class MyClass:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __str__(self):
+        return f"MyClass with name {self.name} and value {self.value}"
+
+    def __repr__(self):
+        return f"MyClass({repr(self.name)}, {repr(self.value)})"
+
+obj = MyClass("example", 42)
+
+print(str(obj))  # 输出: MyClass with name example and value 42
+print(repr(obj))  # 输出: MyClass('example', 42)
+
+# 在交互式解释器中直接输入对象名
+# >>> obj
+# MyClass('example', 42)
+```
