@@ -652,7 +652,7 @@ even_squares_set = {x ** 2 for x in range(10) if x % 2 == 0}
 print(even_squares_set)  # 输出：{0, 64, 4, 36, 16}
 ```
 
-**（3）常见面试题**
+#### 6.4 常见面试题
 
 ```python
 # 问题 1：如何使用列表推导式生成一个包含从 1 到 10 的所有偶数的列表
@@ -676,3 +676,148 @@ nums = [1, 2, 2, 3, 4, 4, 5]
 q_set2 = {x ** 2 for x in nums}
 print(q_set2)  # {1, 4, 9, 16, 25}
 ```
+
+## 7. Python 单下划线和双下划线
+
+在 Python 中，单下划线和双下划线有特殊的含义，通常用于变量名和方法名的前后缀，以表达不同的用途和访问权限。理解这些用法对编写
+Python 代码和理解他人代码都非常重要。
+
+#### 7.1  单下划线（“_”）使用
+
+#### 7.1.1 前缀 "_var"
+
+用于表示某个变量、方法或属性是内部使用的或具有特定含义，但不希望在外部直接访问（实际并不会真的限制访问）。
+
+例如：
+
+```python
+class MyClass:
+    def __init__(self):
+        self._protected_var = 42  # 受保护的变量
+
+    def _protected_method(self):
+        # 私有的
+        print("This is a protected method.")
+
+    def public_method(self):
+        return self._protected_method()
+
+
+obj = MyClass()
+print(obj._protected_var)  # 仍然可以访问，输出：42
+obj._protected_method()  # 仍然可以调用，输出：This is a protected method.
+obj.public_method()  # 输出：This is a protected method.
+```
+变量 “_protected_var” 和方法 “_protected_method” 都以单下划线开头，这是一种约定，告诉其他开发人员这些成员是类内部使用的，不建议在类外部直接访问，公共方法 “public_method” 可以访问内部方法 “_protected_method”。
+
+若模块名或包名以单下划线开头表示这个模块不应该被外部直接导入，这是为了防止模块被 `from module import *` 语句导入。
+
+例如：
+
+```python
+# 文件名为 _internal.py
+def internal_function():
+    pass
+
+
+# 在其他文件中
+from _internal import internal_function  # 不建议这样做
+```
+
+#### 7.1.2 后缀 "var_"
+
+单下划线后缀通常用于避免与 Python 内置名称或关键字冲突。
+
+```python
+class_ = "Python Class"  # 避免与内置的 class 关键字冲突
+```
+
+#### 7.1.3 "_" 临时变量
+
+在循环或解包过程中，单下划线 “_” 常用作临时变量，表示该变量的值将被忽略。
+
+例如：
+
+```python
+for _ in range(3):
+    print("Hello!")  # 输出三次 "Hello!"
+
+x, _ = (1, 2)  # 忽略第二个值
+```
+
+#### 7.1.4 "_" 交互解释器
+
+在 Python 交互式解释器中，单下划线 “_” 用于保存最后一次表达式的结果。
+
+例如:
+
+```text
+>>> 5 + 3
+8
+>>> _
+8
+```
+
+#### 7.2 双下划线（“__”）使用
+
+#### 7.2.1 前缀 "__var" (名称改写机制)
+
+双下划线作为变量名或方法名前缀，表示该变量或方法是类内的私有成员（Private）。Python 会将其名称进行 “改写”（name mangling），将其改为 "_ClassName__var" 的形式，以避免与子类中的名称冲突。
+
+例如：
+
+```python
+class MyClass:
+    def __init__(self):
+        self.__private_var = 42
+
+    def __private_method(self):
+        print("This is a private method.")
+
+
+obj = MyClass()
+
+# print(obj.__private_var)  # AttributeError: 'MyClass' object has no attribute '__private_var'
+# obj.__private_method()  # AttributeError: 'MyClass' object has no attribute '__private_method'
+
+# 通过名称改写访问私有变量和方法
+print(obj._MyClass__private_var)  # 输出: 42
+obj._MyClass__private_method()  # 输出: This is a private method.
+```
+
+#### 7.2.2 前后缀 "\__var\__"（魔术方法/特殊方法）
+
+双下划线前后缀用于定义 Python 的特殊方法或魔术方法（Magic Methods），这些方法通常由 Python 解释器调用，而不是用户直接调用，一般不应为普通变量或方法随意命名为这种形式。  
+
+例如：  
+* `__init__`：是构造函数；
+* `__str__`：通过 str(object) 以及内置函数 format() 和 print() 调用以生成一个对象的 “非正式” 或格式良好的字符串表示。返回值必须是字符串对象。
+* `__repr__`：是由 repr() 内置函数调用，用来输出一个对象的“官方”字符串表示。返回值必须是字符串对象，此方法通常被用于调试。内置类型 object 所定义的默认实现会调用 object.__repr__()。
+
+```python
+class MyClass:
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return f"MyClass with value {self.value}"
+
+
+obj = MyClass(10)
+print(obj)  # 输出: MyClass with value 10
+```
+
+#### 7.3 面试示例
+
+* 问题 1：_var 和 __var 有什么区别？  
+  `_var`：表示受保护的变量，这是约定俗成的表示，意味着该变量不应被外部直接访问，但实际上可以访问；  
+  `__var`：会触发名称改写机制，将其改为 _ClassName__var，从而避免名称冲突，并使其成为类的私有变量；  
+
+
+* 问题 2：如何在 Python 中定义一个类的私有方法，并确保它不会与子类中的方法冲突？  
+  使用双下划线前缀（如 __private_method）来定义类的私有方法，Python 会自动将其名称改写为 _ClassName__private_method，从而避免与子类中的方法冲突；
+
+
+* 问题 3：\__init\__ 和 \__str\__ 的作用是什么？  
+  `__init__`：是类的构造函数，用于初始化对象；  
+  `__str__`：是用于定义对象的字符串表示形式，当使用 print 或 str() 调用对象时会被调用；
