@@ -1107,6 +1107,9 @@ print(formatted_string)  # 输出: Name: Alice, Age: $age (age 没有提供值)
 示例：
 
 ```python
+import os
+from collections.abc import Iterable, Iterator
+# 判断是否是可迭代对象
 print(isinstance([], Iterable))  # 输出: True 列表是可迭代的
 print(isinstance({}, Iterable))  # 输出: True 字典是可迭代的
 print(isinstance((), Iterable))  # 输出: True 元组是可迭代的
@@ -1116,6 +1119,17 @@ print(isinstance('', Iterable))  # 输出: True  字符串是可迭代的
 currPath = os.path.dirname(os.path.abspath(__file__))
 with open(currPath + '/demo.py') as file:
     print(isinstance(file, Iterable))  # True File 是可迭代的
+
+# 判断是否是可迭代器
+print(isinstance([], Iterator))  # 输出: False 列表不是可迭代器
+print(isinstance({}, Iterator))  # 输出: False 字典不是可迭代器
+print(isinstance((), Iterator))  # 输出: False 元组不是可迭代器
+print(isinstance(set(), Iterator))  # 输出: False 集合不是可迭代器
+print(isinstance('', Iterator))  # 输出: False  字符串不是可迭代器
+
+currPath = os.path.dirname(os.path.abspath(__file__))
+with open(currPath + '/demo.py') as file:
+  print(isinstance(file, Iterator))  # True File 是可迭代器
 ```
 
 **`__iter__()` / `__getitem__()` 方法：**
@@ -1214,14 +1228,16 @@ with open(currPath + '/demo.py') as file:
 **小结：**
 * `__iter__()` 是更通用的迭代方法，适用于实现迭代器的对象;
 * `__getitem__()` 适用于基于索引的访问，在没有 `__iter__()` 时可以作为迭代机制的替代方法;  
-  >【备注】 
-  > 一个对象实现了 `__getitem__()` 方法，它就可以被视为可迭代对象，尽管它没有实现 `__iter__()` 方法。在这种情况下，Python 会通过从索引 0 开始递增地调用 `__getitem__()` 来模拟迭代，直到 `__getitem__()` 抛出 IndexError 异常为止。 但，通过 `__iter__()` 方法是更标准的做法。如果仅实现 `__getitem__()`，该对象仍然是可迭代的，但通常这会用于类似于序列（如列表和元组）的对象。
+  >**备注:**  
+  > 一个对象实现了 `__getitem__()` 方法，它就可以被视为可迭代对象，尽管它没有实现 `__iter__()` 方法。
+  > 在这种情况下，Python 会通过从索引 0 开始递增地调用 `__getitem__()` 来模拟迭代，直到 `__getitem__()` 抛出 IndexError 异常为止。 
+  > 但通过 `__iter__()` 方法是更标准的做法。如果仅实现 `__getitem__()`，该对象仍然是可迭代的，但通常这会用于类似于序列（如列表和元组）的对象。
 
 ### 10.3 迭代器 (iterator)
 
 #### 10.3.1 介绍
 
-如上述描述，Python 迭代器是实现了 `__iter__()` 和 `__next__()` 方法的对象。
+如上描述，Python 迭代器是实现了 `__iter__()` 和 `__next__()` 方法的对象。
 
 特征：  
 * `__iter__()` 返回迭代器对象本身；
@@ -1236,49 +1252,49 @@ with open(currPath + '/demo.py') as file:
 
 * 示例：自定义迭代器：
 
-```python
-class Counter:
-    def __init__(self, low, high):
-        self.current = low
-        self.high = high
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.current > self.high:
-            raise StopIteration
-        else:
-            self.current += 1
-            return self.current - 1
-
-
-counter = Counter(1, 5)
-for num in counter:
-    print(num)  # 输出: 1, 2, 3, 4, 5
-```
+  ```python
+  class Counter:
+      def __init__(self, low, high):
+          self.current = low
+          self.high = high
+  
+      def __iter__(self):
+          return self
+  
+      def __next__(self):
+          if self.current > self.high:
+              raise StopIteration
+          else:
+              self.current += 1
+              return self.current - 1
+  
+  
+  counter = Counter(1, 5)
+  for num in counter:
+      print(num)  # 输出: 1, 2, 3, 4, 5
+  ```
 
 * 处理大型日志文件：当处理非常大的日志文件时，迭代器逐行读取文件，避免将整个文件加载到内存中
 
-```python
-class LogFileIterator:
-    def __init__(self, filepath):
-        self.file = open(filepath)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        line = self.file.readline()
-        if not line:
-            self.file.close()
-            raise StopIteration
-        return line.strip()
-
-log_iterator = LogFileIterator("server.log")
-for log in log_iterator:
-    print(log)
-```
+  ```python
+  class LogFileIterator:
+      def __init__(self, filepath):
+          self.file = open(filepath)
+  
+      def __iter__(self):
+          return self
+  
+      def __next__(self):
+          line = self.file.readline()
+          if not line:
+              self.file.close()
+              raise StopIteration
+          return line.strip()
+  
+  log_iterator = LogFileIterator("server.log")
+  for log in log_iterator:
+      print(log)
+  ```
 
 #### 10.3.2 高级用法
 
@@ -1299,7 +1315,8 @@ for log in log_iterator:
       print(next(counter))  # 输出: 1, 2, 3, 1, 2
   ```
   
-  代码解释：使用 itertools.cycle 创建一个无限循环的迭代器，cycle() 会重复遍历提供的可迭代对象，这里是列表 [1, 2, 3]，在循环中，每次调用 next(counter) 都会返回下一个元素，循环到末尾后重新从头开始，由于 for 循环次数设置为 5，输出为 1, 2, 3, 1, 2。
+  代码解释：  
+  使用 itertools.cycle 创建一个无限循环的迭代器，cycle() 会重复遍历提供的可迭代对象，这里是列表 [1, 2, 3]，在循环中，每次调用 next(counter) 都会返回下一个元素，循环到末尾后重新从头开始，由于 for 循环次数设置为 5，输出为 1, 2, 3, 1, 2。
 
   ```python
   from itertools import cycle
@@ -1316,6 +1333,33 @@ for log in log_iterator:
   
   由于 counter 是一个无限循环的迭代器，islice 限制了输出的数量，因此输出为 1, 2, 3, 1。循环首先遍历 [1, 2, 3]，然后再次从 1 开始，由于限制是 4 个元素，最后返回 [1, 2, 3, 1]
 
+#### 10.3.3 可迭代对象与迭代器区别
+
+**可迭代对象 (Iterable)：**
+
+* 定义：实现了 `__iter__()` 或 `__getitem__()` 方法的对象，可以返回一个迭代器（通常 `__iter__()` 会返回 self（亦可返回一个其他迭代器），并在该对象上定义 `__next__()` 方法，即也是迭代器）；
+* 范围：包括所有集合类型，如列表、元组、字典、集合和字符串。通过 for 循环可以遍历它们；
+* 使用：当你想要对元素进行遍历时，使用 for 循环或者调用 iter()；
+
+**迭代器 (Iterator)：**
+
+* 定义：实现了 `__iter__()` 和 `__next__()` 方法的对象，提供了逐个访问元素的机制；
+* 范围：迭代器可以从可迭代对象中通过 iter() 函数获得，也可以是自定义的类；
+* 使用：每次调用 next() 方法时，迭代器返回下一个元素，当元素遍历完时，抛出 StopIteration 异常；
+
+**两者区别：**
+
+* 范围：所有迭代器都是可迭代对象（迭代器必须同时实现 `__iter__()` 方法和 `__next__()` 方法），但并非所有可迭代对象都是迭代器。可迭代对象通过 `__iter__()` 方法生成迭代器；
+* 一次性使用：迭代器只能前进，且只能遍历一次；而可迭代对象可以多次生成迭代器进行遍历；
+* 实现：迭代器比可迭代对象多了 `__next__()` 方法，用于逐个返回元素；
+
+**使用场景：**
+
+* 可迭代对象：适用于需要多次遍历数据的场景，如列表、字典等；
+* 迭代器：适用于需要懒加载数据、流式处理大数据或实现自定义迭代行为的场景；
+
+### 10.4 生成器 (generator)
+pass
 
 
 

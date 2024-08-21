@@ -21,4 +21,5 @@
     * [10.1 容器 (container)](docs/python_features.md#101-容器-container)
     * [10.2 可迭代对象 (iterable)](docs/python_features.md#102-可迭代对象-iterable)
     * [10.3 迭代器 (iterator)](docs/python_features.md#103-迭代器-iterator)
+    * [10.4 生成器 (generator)](docs/python_features.md#104-生成器-generator)
 
