@@ -72,7 +72,7 @@ Python 中函数参数传递本质上是 “传对象引用”，这意味着在
 
 ## 2. Python 元类(metaclass)
 
-#### 2.1 元类（Metaclass）简介
+### 2.1 元类（Metaclass）简介
 
 在 Python 中，一切皆为对象，包括类本身，而元类（Metaclass）是用于创建类的 “类”，即元类定义了类的行为，而类定义了实例的行为，换句话说，元类控制类的创建过程，默认情况下，Python 中所有类的元类是 "type"，它负责创建所有的类。
 
@@ -130,7 +130,7 @@ class MyClass(metaclass=MyMeta):
 * `__init__(cls, name, bases, dct)`: 在类创建之后调用，用于初始化类，此时类已经被创建，cls 是类对象本身。
 * `__call__(cls, *args, **kwargs)`: 控制类实例的创建过程，通常用于单例模式。
 
-#### 2.2 元类面试题
+### 2.2 元类面试题
 
 * 面试题 1: 解释 Python 中的元类，元类的作用是什么？  
   **解答**：  
@@ -215,7 +215,7 @@ class MyClass(metaclass=MyMeta):
 
 在 Python 中，主要有三种方法：实例方法、类方法 (classmethod) 和 静态方法 (staticmethod)，这三者的区别在于它们的调用方式以及它们可以访问的对象和数据。
 
-#### 3.1 实例方法
+### 3.1 实例方法
 
 实例方法是定义在类中，并且在类的实例上调用的方法。它们可以访问实例属性和方法，并且默认第一个参数是 self，表示类的实例。
 
@@ -238,7 +238,7 @@ obj = MyClass(10)
 print(obj.instance_method())  # 输出: Instance method called. Value is 10
 ```
 
-#### 3.2 类方法 (classmethod)
+### 3.2 类方法 (classmethod)
 
 类方法使用 @classmethod 装饰器来定义，默认第一个参数是 cls，表示类本身，而不是类的实例，类方法可以访问类属性和类方法，但不能直接访问实例属性。
 
@@ -263,7 +263,7 @@ obj = MyClass()
 print(obj.class_method())  # 也可以通过实例调用
 ```
 
-#### 3.3 静态方法 (staticmethod)
+### 3.3 静态方法 (staticmethod)
 
 静态方法使用 @staticmethod 装饰器来定义，静态方法没有默认参数，它既不需要访问实例属性，也不需要访问类属性。因此，静态方法与普通的函数基本没有区别，只是它们被包含在类的命名空间中。
 
@@ -286,7 +286,7 @@ obj = MyClass()
 print(obj.static_method())  # 也可以通过实例调用
 ```
 
-#### 3.4 区别总结
+### 3.4 区别总结
 
 | \\                 | 实例方法                                      | 类方法                                                               | 静态方法                                                             |
 |:-------------------|:------------------------------------------|:------------------------------------------------------------------|:-----------------------------------------------------------------|
@@ -297,7 +297,7 @@ print(obj.static_method())  # 也可以通过实例调用
 
 ## 4. 类变量和实例变量
 
-#### 4.1 类变量（Class Variables）
+### 4.1 类变量（Class Variables）
 
 类变量是在类内部声明（但在任何方法之外）定义的变量，它们在类的所有实例之间共享。换句话说，类变量对于每个实例都是相同的，修改类变量的值会影响所有实例。
 
@@ -331,7 +331,7 @@ print(obj1.class_variable)  # 输出: New class value
 print(obj2.class_variable)  # 输出: New class value
 ```
 
-#### 4.2 实例变量（Instance Variables）
+### 4.2 实例变量（Instance Variables）
 
 实例变量是在类的 `__init__` 方法中，或者其他实例方法中使用 self 关键字定义的变量。实例变量的值对于每个实例来说都是独立的，不同实例的实例变量可以有不同的值。
 
@@ -363,18 +363,18 @@ print(obj1.instance_variable)  # 输出: New value for Object 1
 print(obj2.instance_variable)  # 输出: Object 2
 ```
 
-#### 4.3 类变量与实例变量的区别
+### 4.3 类变量与实例变量的区别
 
 * 作用域：类变量属于类，实例变量属于实例；
 * 共享性：类变量在所有实例之间共享，实例变量是独立的；
 * 访问方式：类变量可以通过类名或实例名访问，但实例变量只能通过实例名访问；
 * 生命周期：类变量的生命周期与类相同，实例变量的生命周期与实例相同；
 
-#### 4.4 注意事项（避免混淆）
+### 4.4 注意事项（避免混淆）
 
 在 Python 中，当类变量是一个可变对象（如列表、字典、集合等）时，通过实例修改类变量的行为会与不可变对象（如整数、字符串、元组等）有所不同。这是由于 Python 中对象的可变性和引用机制所导致的（如第一章节）。
 
-#### 4.4.1 类变量 —— 不可变对象
+### 4.4.1 类变量 —— 不可变对象
 
 对于不可变对象（如整数、字符串、元组等），如果通过实例对类变量进行赋值（修改）操作，Python 会在实例的命名空间中创建一个新的同名实例变量，而不会修改类变量。例如：
 
@@ -430,7 +430,7 @@ print(MyClass.class_variable)  # 输出: [1]
 
 Python 自省（Introspection）是指在运行时检查对象的能力。通过自省，Python 程序可以在运行时动态获取对象的类型、属性、方法、父类、模块等信息。自省机制使 Python 具有强大的动态性，能够根据当前对象的状态进行相应的操作。
 
-#### 5.1 自省主要功能
+### 5.1 自省主要功能
 
 #### 5.1.1 获取对象类型
 
@@ -507,7 +507,7 @@ print(os.__file__)  # 输出: 文件路径
 print(os.__doc__)  # 输出: os 模块的文档字符串
 ```
 
-#### 5.2 自省应用场景
+### 5.2 自省应用场景
 
 #### 5.2.1 动态导入模块
 
@@ -531,7 +531,7 @@ obj = MyDynamicClass()
 print(obj.attribute)  # 输出: 100
 ```
 
-#### 5.3 面试示例
+### 5.3 面试示例
 * 问题 1：什么是 Python 自省？请举例说明：
   答：自省是指在运行时检查对象的能力。示例：可以是使用 type() 获取对象类型，使用 dir() 列出对象的属性和方法。
 
@@ -545,7 +545,7 @@ print(obj.attribute)  # 输出: 100
 
 推导式是 Python 中非常强大的语法工具，允许我们以简洁的方式生成和操作列表、字典以及集合。
 
-#### 6.1 列表推导式（List Comprehension）
+### 6.1 列表推导式（List Comprehension）
 
 **（1）基本语法**
 
@@ -582,7 +582,7 @@ flatten_matrix = [x for row in matrix for x in row]
 print(flatten_matrix)  # 输出：[1, 2, 3, 4, 5, 6, 7, 8, 9]
 ```
 
-#### 6.2 字典推导式（Dict Comprehension）
+### 6.2 字典推导式（Dict Comprehension）
 
 **（1）基本语法**
 
@@ -620,7 +620,7 @@ dictionary = {k: v for k, v in tuples}
 print(dictionary)  # 输出：{1: 'a', 2: 'b', 3: 'c'}
 ```
 
-#### 6.3 集合推导式（Set Comprehension）
+### 6.3 集合推导式（Set Comprehension）
 
 集合推导式类似于列表推导式和字典推导式，但生成的结果是一个集合。集合是无序且不允许重复元素的，因此集合推导式会自动去除重复元素。
 
@@ -652,7 +652,7 @@ even_squares_set = {x ** 2 for x in range(10) if x % 2 == 0}
 print(even_squares_set)  # 输出：{0, 64, 4, 36, 16}
 ```
 
-#### 6.4 常见面试题
+### 6.4 常见面试题
 
 ```python
 # 问题 1：如何使用列表推导式生成一个包含从 1 到 10 的所有偶数的列表
@@ -682,7 +682,7 @@ print(q_set2)  # {1, 4, 9, 16, 25}
 在 Python 中，单下划线和双下划线有特殊的含义，通常用于变量名和方法名的前后缀，以表达不同的用途和访问权限。理解这些用法对编写
 Python 代码和理解他人代码都非常重要。
 
-#### 7.1  单下划线（“_”）使用
+### 7.1  单下划线（“_”）使用
 
 #### 7.1.1 前缀 "_var"
 
@@ -758,7 +758,7 @@ x, _ = (1, 2)  # 忽略第二个值
 8
 ```
 
-#### 7.2 双下划线（“__”）使用
+### 7.2 双下划线（“__”）使用
 
 #### 7.2.1 前缀 "__var" (名称改写机制)
 
@@ -807,7 +807,7 @@ obj = MyClass(10)
 print(obj)  # 输出: MyClass with value 10
 ```
 
-#### 7.3 面试示例
+### 7.3 面试示例
 
 * 问题 1：_var 和 __var 有什么区别？  
   `_var`：表示受保护的变量，这是约定俗成的表示，意味着该变量不应被外部直接访问，但实际上可以访问；  
@@ -826,7 +826,7 @@ print(obj)  # 输出: MyClass with value 10
 
 在 Python 中，`__str__` 和 `__repr__` 是两个用于对象字符串表示的特殊方法（魔术方法），它们虽然都用于返回对象的字符串表示，但在语义和用途上有所不同。
 
-#### 8.1 \"_\_str__"
+### 8.1 \"_\_str__"
 
 通过 str(object) 以及内置函数 format() 和 print() 调用以生成一个对象的 “非正式” 或格式良好的字符串表示，返回值必须是字符串对象。
 
@@ -846,7 +846,7 @@ obj = MyClass("example", 42)
 print(obj)  # 输出: MyClass(name=example, value=42)
 ```
 
-#### 8.2 \"_\_repr__"
+### 8.2 \"_\_repr__"
 
 由 repr() 内置函数调用，用来输出一个对象的 “官方” 字符串表示，返回值必须是字符串对象，此方法通常被用于调试，内置类型 object 所定义的默认实现会调用 `object.__repr__()`。
 
@@ -866,7 +866,7 @@ obj = MyClass("example", 42)
 print(repr(obj))  # 输出: MyClass('example', 42)
 ```
 
-#### 8.3 "\_\_str__" vs. "\_\_repr__"
+### 8.3 "\_\_str__" vs. "\_\_repr__"
 
 如上所述：
 
@@ -936,7 +936,7 @@ print(repr(obj))  # 输出: MyClass('example', 42)
 
 在 Python 中，字符串格式化 & 拼接有几种常用方式。
 
-#### 9.1 使用 "%" 操作符
+### 9.1 使用 "%" 操作符
 
 这是最早的字符串格式化方法（Python 2.6 以前），通过 “%” 符号替代字符串中的占位符，常用占位符有 %s（字符串）、%d（整数）、%f（浮点数）等。
 
@@ -966,7 +966,7 @@ print(formatted_string)  # 输出：Names: ('Alice', 'Paddy', 'Joie')
 **优点**：简单易用，适合处理简单的字符串格式化;  
 **缺点**：不支持复杂的数据结构或格式化选项;
 
-#### 9.2 使用 "str.format()" 方法
+### 9.2 使用 "str.format()" 方法
 
 "str.format()" 提供了更强大的格式化功能，可以通过位置或关键字参数指定占位符，并且支持丰富的格式化选项。
 
@@ -995,7 +995,7 @@ print(formatted_string)  # 输出: Pi is approximately 3.14
 **优点**：功能强大，支持复杂的格式化和嵌套数据结构；  
 **缺点**：语法较繁琐，格式字符串容易变得冗长；  
 
-#### 9.3 使用 "f-strings" (Python 3.6+)
+### 9.3 使用 "f-strings" (Python 3.6+)
 
 "f-strings" 是 Python 3.6 引入的一种格式化字符串的方式，语法简洁、直观，直接在字符串中嵌入变量和表达式。
 
@@ -1016,7 +1016,7 @@ print(formatted_string)  # 输出: Pi is approximately 3.14
 **优点**：简洁、直观、性能高，可嵌入表达式，支持多行字符串;  
 **缺点**：仅在 Python 3.6 及以上版本可用;
 
-#### 9.4 使用 "string.Template"
+### 9.4 使用 "string.Template"
 
 "string.Template" 提供了一种安全的字符串替换方法，特别适合从不可信的数据源构建字符串。
 
@@ -1037,7 +1037,7 @@ print(formatted_string)  # 输出: Name: Alice, Age: $age (age 没有提供值)
 **优点**：安全性高，适用于处理用户输入数据;  
 **缺点**：功能有限，不支持复杂的表达式或高级格式化选项;  
 
-#### 9.5 其他简单字符串拼接
+### 9.5 其他简单字符串拼接
 
 * 通过 "+" 号的形式：
 
@@ -1075,4 +1075,249 @@ print(formatted_string)  # 输出: Name: Alice, Age: $age (age 没有提供值)
   ```python
   a = 'Hello World!'
   print(a * 3)  # Hello World!Hello World!Hello World!
+  ``` 
+
+## 10. 可迭代对象、迭代器和生成器
+ 
+理清 Python 中 "容器（container）"、“可迭代对象（iterable）”、“迭代器（iterator）”、“生成器（generator）” 概念及用法。其相互之间关系如下图所示：
+
+![python_features10_1.png](..%2F_static%2Fpython_features10_1.png)
+
+### 10.1 容器 (container)
+
+容器是用来存储和管理多个元素的对象，可以存放任何数据类型的元素，包括其他容器，可以用 “in”, “not in” 关键字判断元素是否包含在容器中。通常这类数据结构把所有的元素存储在内存中（也有一些特例，并不是所有的元素都放在内存，比如迭代器和生成器对象）在 Python 中，常见的容器对象有：
+
+1. 列表 (List)：有序且可变，允许重复元素；`my_list = [1, 2, 3, 4]`
+2. 元组 (Tuple)：有序且不可变，允许重复元素；`my_tuple = (1, 2, 3, 4)`
+3. 字典 (Dictionary)：无序的键值对集合，键必须唯一且不可变，值可以是任何类型；`my_dict = {'a': 1, 'b': 2}`
+4. 集合 (Set)：无序且不重复的元素集合，支持数学集合操作；`my_set = {1, 2, 3, 4}`
+5. 字符串 (String)：不可变的字符序列；`my_string = "Hello"`
+
+尽管绝大多数容器都提供了某种方式来获取其中的每一个元素，但这并不是容器本身提供的能力，而是可迭代对象赋予了容器这种能力，当然并不是所有的容器都是可迭代的。
+
+### 10.2 可迭代对象 (iterable)
+
+可迭代对象是实现了 `__iter__()` 或 `__getitem__()` 方法的对象，返回一个迭代器对象供遍历。
+
+**常见的可迭代对象：**
+
+* 内置容器类型：如列表、元组、字典、集合、字符串等；
+* 文件对象：文件读取操作返回的对象也是可迭代的；
+
+示例：
+
+```python
+print(isinstance([], Iterable))  # 输出: True 列表是可迭代的
+print(isinstance({}, Iterable))  # 输出: True 字典是可迭代的
+print(isinstance((), Iterable))  # 输出: True 元组是可迭代的
+print(isinstance(set(), Iterable))  # 输出: True 集合是可迭代的
+print(isinstance('', Iterable))  # 输出: True  字符串是可迭代的
+
+currPath = os.path.dirname(os.path.abspath(__file__))
+with open(currPath + '/demo.py') as file:
+    print(isinstance(file, Iterable))  # True File 是可迭代的
+```
+
+**`__iter__()` / `__getitem__()` 方法：**
+
+* `__iter__()` 方法：
+  * 可迭代对象的核心方法之一；
+  * 通过实现 `__iter__()` 方法，一个对象可以成为可迭代对象，返回一个迭代器；
+  * `__iter__()` 必须返回一个带有 `__next__()` 方法的对象，例，在一个类中实现 `__iter__()` 方法，通常会返回 self，并在该对象上定义 `__next__()` 方法；
+  * 示例：
+  
+    ```python
+    class MyIterable:
+        def __iter__(self):
+            self.current = 0
+            return self
+
+        def __next__(self):
+            if self.current < 3:
+                self.current += 1
+                return self.current
+            else:
+                raise StopIteration
+
+    my_iter = iter(MyIterable())  # iter() Python 内置函数，手动调用其 __iter__() 方法并返回一个迭代器，见下文解释
+    print(next(my_iter))  # 输出: 1  next() Python 内置函数，手动调用其 __next__() 获取迭代器的下一个元素，见下文解释
+    
+    for i in my_iter:
+        print(i)  # 输出: 1 2 3
+    `````
+  * for 循环遍历可迭代对象的原理：
+    * 调用 `__iter__()` 方法：
+      * Python 首先调用可迭代对象的 `__iter__()` 方法，这个方法返回一个迭代器对象；
+      * 迭代器是一个实现了 `__next__()` 方法的对象，用于逐步返回下一个元素;
+    * 获取迭代器：
+      * `__iter__()` 返回的迭代器会用于遍历该可迭代对象;
+    * 调用 `__next__()` 方法：
+      * for 循环内部会自动调用迭代器的 `__next__()` 方法来获取下一个元素，并将其赋值给循环变量;
+      * 每次调用 `__next__()` 方法时，迭代器返回一个新的元素;
+    * 处理 StopIteration 异常： 
+      * 当迭代器的元素被遍历完后，`__next__()` 方法会抛出 StopIteration 异常，表示迭代结束;
+      * for 循环会捕获这个异常，并终止循环;
+      * 例如：
+        ```
+        x = [1, 2, 3]
+        for elem in x:
+        …
+        ```
+        原理如图所示：  
+      
+         ![python_features10_2.png](..%2F_static%2Fpython_features10_2.png)
+    
+  * iter() 函数（`__iter__()` 是可迭代对象实现的内部方法，而 `iter()` 是获取迭代器的外部函数）:
+    * 内置函数，用于从可迭代对象或迭代器获取迭代器，是手动调用 __iter__() 方法的一种方式；
+    * 对于可迭代对象，iter(obj) 会调用其 `__iter__()` 方法并返回一个迭代器；
+    * 如果对象没有实现 `__iter__()` 但实现了 `__getitem__()`，iter() 也可以返回一个迭代器，使用索引递增方式进行迭代；  
+    * 示例：
+      ```
+      >>> x = [1, 2, 3]
+      >>> y = iter(x)
+      >>> type(x)
+      <class 'list'>
+      >>> type(y)
+      <class 'list_iterator'>
+      ```
+  * next() 函数：
+    * Python 的内置函数，用于获取迭代器的下一个元素，是手动调用 __next__() 方法的一种方式；
+    * 它内部会调用迭代器对象的 __next__() 方法；
+    * 语法：next(iterator[, default])。default 是可选参数，当迭代器耗尽时返回该值，而不是抛出 StopIteration 异常；  
+    * 示例：
+      ```
+      >>> iterator = iter([1, 2, 3])
+      >>> print(next(iterator))
+      1
+      >>> print(iterator.__next__())
+      2
+      ```
+* `__getitem__()` 方法：
+  * 如果对象实现了 `__getitem__()` 方法，它也可以被迭代；
+  * `__getitem__()` 通常用于索引访问（如 obj[index]），当实现此方法时，Python 的迭代机制可以通过递增索引来迭代对象；
+  * 示例：
+  
+    ```python
+    class MySequence:
+        def __getitem__(self, index):
+            if index < 3:
+                return index * 2
+            else:
+                raise IndexError("Index out of range")
+    
+    my_seq = MySequence()
+    print(my_seq[2])  # 输出: 4
+    # print(my_seq[3])  # 输出: IndexError: Index out of range
+    for item in my_seq:
+        print(item)  # 输出: 0, 2, 4
+    ```
+**小结：**
+* `__iter__()` 是更通用的迭代方法，适用于实现迭代器的对象;
+* `__getitem__()` 适用于基于索引的访问，在没有 `__iter__()` 时可以作为迭代机制的替代方法;  
+  >【备注】 
+  > 一个对象实现了 `__getitem__()` 方法，它就可以被视为可迭代对象，尽管它没有实现 `__iter__()` 方法。在这种情况下，Python 会通过从索引 0 开始递增地调用 `__getitem__()` 来模拟迭代，直到 `__getitem__()` 抛出 IndexError 异常为止。 但，通过 `__iter__()` 方法是更标准的做法。如果仅实现 `__getitem__()`，该对象仍然是可迭代的，但通常这会用于类似于序列（如列表和元组）的对象。
+
+### 10.3 迭代器 (iterator)
+
+#### 10.3.1 介绍
+
+如上述描述，Python 迭代器是实现了 `__iter__()` 和 `__next__()` 方法的对象。
+
+特征：  
+* `__iter__()` 返回迭代器对象本身；
+* `__next__()` 返回序列中的下一个值，如果没有值，则抛出 StopIteration 异常；
+* 惰性求值：延迟计算，节省内存。即，每次调用 `__next__()` 时才生成下一个元素，节省内存；
+* 只能向前遍历，不能回溯，一次性使用，遍历后需重新创建；
+* 适用于需要逐个访问元素且无需保存整个序列的场景，如遍历大型文件、数据流等；
+
+性能：  
+* 迭代器在处理大数据集时具有明显优势，因为它按需生成元素，不需要将所有数据加载到内存中；
+* 在处理流数据或处理无界数据集时，迭代器避免了一次性计算所有元素，减少了内存使用，提高了性能；
+
+* 示例：自定义迭代器：
+
+```python
+class Counter:
+    def __init__(self, low, high):
+        self.current = low
+        self.high = high
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current > self.high:
+            raise StopIteration
+        else:
+            self.current += 1
+            return self.current - 1
+
+
+counter = Counter(1, 5)
+for num in counter:
+    print(num)  # 输出: 1, 2, 3, 4, 5
+```
+
+* 处理大型日志文件：当处理非常大的日志文件时，迭代器逐行读取文件，避免将整个文件加载到内存中
+
+```python
+class LogFileIterator:
+    def __init__(self, filepath):
+        self.file = open(filepath)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        line = self.file.readline()
+        if not line:
+            self.file.close()
+            raise StopIteration
+        return line.strip()
+
+log_iterator = LogFileIterator("server.log")
+for log in log_iterator:
+    print(log)
+```
+
+#### 10.3.2 高级用法
+
+* 链式迭代：通过 itertools.chain 实现多个可迭代对象的无缝迭代
+  ```python
+  from itertools import chain
+
+  for item in chain([1, 2], ['a', 'b']):
+      print(item)  # 输出: 1, 2, a, b
   ```
+
+* 无限迭代：itertools.cycle 用于无限循环迭代可迭代对象
+ 
+  ```python
+  from itertools import cycle
+  counter = cycle([1, 2, 3]) # 创建一个无限循环迭代器
+  for _ in range(5):
+      print(next(counter))  # 输出: 1, 2, 3, 1, 2
+  ```
+  
+  代码解释：使用 itertools.cycle 创建一个无限循环的迭代器，cycle() 会重复遍历提供的可迭代对象，这里是列表 [1, 2, 3]，在循环中，每次调用 next(counter) 都会返回下一个元素，循环到末尾后重新从头开始，由于 for 循环次数设置为 5，输出为 1, 2, 3, 1, 2。
+
+  ```python
+  from itertools import cycle
+  from itertools import islice
+  
+  counter = cycle([1, 2, 3])
+  limited = islice(counter, 0, 4)
+  for x in limited:
+      print(x) # 输出: 1, 2, 3, 1
+  ```
+  代码解释： 
+  * cycle([1, 2, 3]) 是一个迭代器，它会无限循环遍历 [1, 2, 3]； 
+  * islice(counter, 0, 4) 用于从 counter 中切片，返回从位置 0 开始的 4 个元素；
+  
+  由于 counter 是一个无限循环的迭代器，islice 限制了输出的数量，因此输出为 1, 2, 3, 1。循环首先遍历 [1, 2, 3]，然后再次从 1 开始，由于限制是 4 个元素，最后返回 [1, 2, 3, 1]
+
+
+
+
+
+

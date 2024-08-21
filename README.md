@@ -17,3 +17,8 @@
 * [7. Python 单下划线和双下划线](docs/python_features.md#7-python-单下划线和双下划线)
 * [8. Python "\_\_str__" vs. \"_\_repr__"](docs/python_features.md#8-python-__str__-vs-__repr__)
 * [9. 字符串格式化 & 拼接](docs/python_features.md#9-字符串格式化--拼接)
+* [10. 可迭代对象、迭代器和生成器](docs/python_features.md#10-可迭代对象迭代器和生成器)
+    * [10.1 容器 (container)](docs/python_features.md#101-容器-container)
+    * [10.2 可迭代对象 (iterable)](docs/python_features.md#102-可迭代对象-iterable)
+    * [10.3 迭代器 (iterator)](docs/python_features.md#103-迭代器-iterator)
+
