@@ -1101,7 +1101,7 @@ print(formatted_string)  # 输出: Name: Alice, Age: $age (age 没有提供值)
 
 **常见的可迭代对象：**
 
-* 内置容器类型：如列表、元组、字典、集合、字符串等；
+* 内置容器类型：如 列表、元组、字典、集合、字符串等；
 * 文件对象：文件读取操作返回的对象也是可迭代的；
 
 示例：
@@ -1121,15 +1121,15 @@ with open(currPath + '/demo.py') as file:
     print(isinstance(file, Iterable))  # True File 是可迭代的
 
 # 判断是否是可迭代器
-print(isinstance([], Iterator))  # 输出: False 列表不是可迭代器
-print(isinstance({}, Iterator))  # 输出: False 字典不是可迭代器
-print(isinstance((), Iterator))  # 输出: False 元组不是可迭代器
-print(isinstance(set(), Iterator))  # 输出: False 集合不是可迭代器
-print(isinstance('', Iterator))  # 输出: False  字符串不是可迭代器
+print(isinstance([], Iterator))  # 输出: False 列表不是迭代器
+print(isinstance({}, Iterator))  # 输出: False 字典不是迭代器
+print(isinstance((), Iterator))  # 输出: False 元组不是迭代器
+print(isinstance(set(), Iterator))  # 输出: False 集合不是迭代器
+print(isinstance('', Iterator))  # 输出: False  字符串不是迭代器
 
 currPath = os.path.dirname(os.path.abspath(__file__))
 with open(currPath + '/demo.py') as file:
-  print(isinstance(file, Iterator))  # True File 是可迭代器
+  print(isinstance(file, Iterator))  # True File 是迭代器
 ```
 
 **`__iter__()` / `__getitem__()` 方法：**
@@ -1182,7 +1182,7 @@ with open(currPath + '/demo.py') as file:
          ![python_features10_2.png](..%2F_static%2Fpython_features10_2.png)
     
   * iter() 函数（`__iter__()` 是可迭代对象实现的内部方法，而 `iter()` 是获取迭代器的外部函数）:
-    * 内置函数，用于从可迭代对象或迭代器获取迭代器，是手动调用 __iter__() 方法的一种方式；
+    * 内置函数，用于从可迭代对象或迭代器获取迭代器，是手动调用 `__iter__()` 方法的一种方式；
     * 对于可迭代对象，iter(obj) 会调用其 `__iter__()` 方法并返回一个迭代器；
     * 如果对象没有实现 `__iter__()` 但实现了 `__getitem__()`，iter() 也可以返回一个迭代器，使用索引递增方式进行迭代；  
     * 示例：
@@ -1195,8 +1195,8 @@ with open(currPath + '/demo.py') as file:
       <class 'list_iterator'>
       ```
   * next() 函数：
-    * Python 的内置函数，用于获取迭代器的下一个元素，是手动调用 __next__() 方法的一种方式；
-    * 它内部会调用迭代器对象的 __next__() 方法；
+    * Python 的内置函数，用于获取迭代器的下一个元素，是手动调用 `__next__()` 方法的一种方式；
+    * 它内部会调用迭代器对象的 `__next__()` 方法；
     * 语法：next(iterator[, default])。default 是可选参数，当迭代器耗尽时返回该值，而不是抛出 StopIteration 异常；  
     * 示例：
       ```
@@ -1359,9 +1359,108 @@ with open(currPath + '/demo.py') as file:
 * 迭代器：适用于需要懒加载数据、流式处理大数据或实现自定义迭代行为的场景；
 
 ### 10.4 生成器 (generator)
-pass
+
+生成器 (generator) 是一种特殊的迭代器，但反之不一定成立，其通过 yield 关键字在函数中实现，可以逐个返回元素，而不需要一次性生成所有数据。
+
+**定义：**
+* 生成器是使用 yield 关键字定义的特殊迭代器函数，每次调用 yield 时返回一个值，并暂停函数执行；
+* 生成器返回的是一个迭代器，可以逐个访问生成的元素；
+
+**原理：**
+* 每次调用生成器函数时，执行到 yield 停止，并返回一个值，下次从此处继续执行；
+* 生成器在运行时动态生成数据，而非预先生成所有数据；
+
+**yield 关键字：**
+
+* yield 是生成器函数的核心，它暂停函数执行并返回一个值，下次函数从暂停的地方继续执行；
+* 每次调用 yield，函数状态（包括局部变量）都会被保存，允许函数在下次调用时继续从中断的地方继续执行；
+* yield 与 return 的区别：（1）yield 可以多次返回值，并保持函数状态；（2）return 会终止函数并返回单一值，函数状态不会保留；
+
+**生成器创建方法：**
+
+生产器的创建方法有两种：一是生成器表达式；二是生成器函数 (yield) 关键字。
+
+* 生成器表达式
+  生成器表达式类似列表推导式，但使用圆括号 "()" 而非方括号 "[]"。
+  
+  ```python
+  from collections.abc import Generator
+
+  gen = (x * x for x in range(10))
+  print(isinstance(gen, Generator))  # 输出：True 是生成器
+  print(type(gen))  # 输出：<class 'generator'>
+  # print(list(gen))  # 输出：[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+  print(next(gen))  # 输出：0
+  for ℹ in gen:
+      print(i)  # 输出：1 4 9 16 25 36 49 64 81
+  ```
+
+* 生成器函数
+
+  如果一个函数定义中包含 yield 关键字，那么这个函数就不再是一个普通的函数，而是一个 generator。
+
+  示例1： 倒序打印
+
+  ```
+  def countdown(n):
+      while n > 0:
+          yield n
+          n -= 1
+
+  for num in countdown(5):
+      print(num)  # 输出: 5, 4, 3, 2, 1
+  ```
+
+  示例2： 斐波那契数列，生成器可以用于生成无限序列，如斐波那契数列，避免一次性生成所有数据
+
+  ```python
+  def fib():
+      prev, curr = 0, 1
+      while True:
+          yield curr
+          prev, curr = curr, curr + prev
 
 
+  # 创建一个斐波那契数列生成器对象
+  f = fib()
 
+  # 打印前10个斐波那契数列元素
+  for _ in range(10):
+      print(next(f))  # 输出：1 1 2 3 5 8 13 21 34 55
+  ```
+  
+  当执行 f=fib() 时返回的是一个生成器对象，此时函数体中的代码不会执行，只有显示或隐式调用 next() 的时候才会真正执行里面的代码。 在每次调用 next() 的时候执行，遇到 yield 语句返回，再次执行时，从上次返回的 yield 语句处继续执行。  
+  
+  示例3（高级）：生成器委托，使用 yield from 委托子生成器，简化嵌套生成器的调用
+  ```python
+  def sub_generator():
+  yield 1
+  yield 5
 
+  def main_generator():
+      yield from sub_generator()
+      yield 3
+  
+  for item in main_generator():
+      print(item)  # 输出: 1, 5, 3
+  ```
+  
+**性能：**
 
+* 生成器与迭代器一样，通过延迟计算和按需生成数据，节省了内存并提高了性能；
+* 生成器的性能优势在于处理大型或无限数据集时的内存效率，特别是在流式数据处理或大数据分析中非常有用；
+* 生成器在处理复杂逻辑时还能保持代码简洁，提高可读性；
+
+### 10.5 面试示例
+
+* 如何判断一个对象是否是可迭代对象？
+  使用 isinstance(obj, Iterable)，Iterable 在 collections.abc 模块中；
+
+* 什么是迭代器协议？
+  迭代器协议包括 `__iter__()` 和 `__next__()` 方法；
+
+* 生成器与迭代器的区别是什么？
+  生成器是迭代器的一种，它通过 yield 关键字实现，并且能够在执行中暂停和恢复。
+
+* 生成器在什么情况下比列表更有优势？
+  当处理大数据集时，生成器可以节省内存，因为它们不会将所有元素一次性加载到内存中，而是按需生成；
