@@ -1464,3 +1464,260 @@ with open(currPath + '/demo.py') as file:
 
 * 生成器在什么情况下比列表更有优势？
   当处理大数据集时，生成器可以节省内存，因为它们不会将所有元素一次性加载到内存中，而是按需生成；
+
+* 将列表生成式中 [] 改成 () 之后数据结构是否改变？
+  是，从列表变为生成器。
+  ```
+  >>> L = [x*x for x in range(10)]
+  >>> L
+  [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+  >>> g = (x*x for x in range(10))
+  >>> g
+  <generator object <genexpr> at 0x7fad1f8cc520>
+  ```
+  
+  通过列表生成式，可以直接创建一个列表。但是，受到内存限制，列表容量肯定是有限的。而且，创建一个包含百万元素的列表，不仅是占用很大的内存空间，如：我们只需要访问前面的几个元素，后面大部分元素所占的空间都是浪费的。因此，没有必要创建完整的列表（节省大量内存空间）。在Python中，我们可以采用生成器：边循环，边计算的机制 —> 生成器 (generator)
+
+## 11. *args and **kwargs
+
+在 Python 中，`*args` 和 `**kwargs` 是两种用于函数定义时处理可变数量参数的机制，分别用于处理位置参数（*args）和关键字参数（**kwargs）。这两个机制提高了函数的灵活性和可重用性。
+
+* 位置参数：按位置顺序传递给函数的参数，必须按顺序提供，调用时参数的顺序决定其赋值；
+  ```python
+  def greet(name: str, age: int):
+      print(f"Name: {name}, Age: {age}")
+  
+  
+  greet("Alice", 30)  # 输出: Name: Alice, Age: 30
+  ```
+* 关键字参数：在调用函数时，通过名称（键）传递的参数，可以任意顺序传递，调用时明确指定每个参数的名称。
+  ```python
+  def greet(name: str, age: int = 10):
+    print(f"Name: {name}, Age: {age}")
+
+  greet(age=30, name="Alice")  # 输出: Name: Alice, Age: 30
+  ```
+  
+两者区别：  
+（1）位置参数依赖顺序，关键字参数依赖名称；  
+（2）使用关键字参数可以提高代码的可读性和灵活性，尤其是在参数较多或顺序不固定时；
+
+`*args` 和 `**kwargs` 允许将多个不确定参数或关键字参数传递给函数。
+
+### 11.1 *args
+
+`*args` 用于函数中接收任意数量的位置参数，返回一个元组。在函数需要处理不确定数量的输入时使用。
+
+示例：
+
+```python
+def add_numbers(*args):
+    print(type(args))  # 输出：<class 'tuple'>
+    print(args[0])  # 输出：1
+    args[0] = 9 # 输出：TypeError: 'tuple' object does not support item assignment
+    return sum(args)
+
+# 传递三个不同的位置参数
+print(add_numbers(1, 2, 3))  # 输出: 6
+nums = [1, 2, 3]
+# * 解包可迭代对象
+print(add_numbers(*nums))  # 输出: 6
+
+# 解包列表并将参数传递给函数时，就好像单独传递了每个参数一样。这意味着可以使用多个解包运算符从多个列表中获取值，并将它们全部传递给单个函数
+nums1 = [1, 2, 3]
+nums2 = [4, 5, 6]
+nums3 = [7, 8, 9]
+print(add_numbers(*nums1, *nums2, *nums3))  # 输出: 45
+```
+
+代码解释：“add_numbers” 函数使用了 *args 参数来接收任意数量的位置参数，并将它们相加返回总和。可以向函数传递任意数量的参数，不限制参数的个数。
+
+注意：
+* 调用函数 "\*nums" ：这里 “*” 表示为解包运算符，用于解包列表、元组等可迭代对象，将其元素传递给函数或构造新的列表、元组等； 
+* 函数参数 “\*args”：在函数参数定义中使用 “*” 将多个位置参数打包成一个元组 (tuple)，元组是一个不可变的对象，其值在赋值后不能更改；
+* “\*args”："args" 只是一个名称，可以选择其他名称（符合命名规范）， 但 “*” 必须，例如：“*argsintegers”；
+
+### 11.2 **kwargs
+
+`**kwargs` 用于函数中接收任意数量的关键字参数，返回一个字典。在函数需要处理不确定数量的命名参数时使用。
+
+```python
+def greet(**kwargs):
+    print(type(kwargs))  # 输出：<class 'dict'>
+    for key, value in kwargs.items():
+        print(f"{key}: {value}")
+
+
+greet(name="Alice", age=30)  # 输出: name: Alice, age: 30
+user = {"name": "Alice", "age": 30, "address": "china"}
+# ** 解包字典，将键值对作为关键字参数传递给函数
+greet(**user)  # 输出: name: Alice, age: 30 address: china
+# 同上述 *args 同理
+info = {"phone": "****", "email": "email@xxx.com"}
+greet(**user, **info) # 输出: name: Alice, age: 30 address: china phone: **** email: email@xxx.com
+```
+
+代码解释：“greet” 函数使用了 "**kwargs" 参数来接收任意数量的关键字参数，并将它们打印输出。可以向函数传递任意数量的参数，不限制参数的个数。
+
+注意：
+* 调用函数 "\**user" ：解包字典，“**” 运算符用于解包字典，将键值对作为关键字参数传递给函数；
+* 函数参数 “\**kwargs”：在函数参数定义中使用 “**”，将多个关键字参数打包成一个字典 (dict)；
+* “\**kwargs”：”kwargs“ 只是一个名称，可以选择其他名称（符合命名规范），但 “**”（星号）必须，例如：“**words”；
+
+### 11.3 混合使用
+
+```python
+def func(*args, **kwargs):
+    print("args:", args)
+    print("kwargs:", kwargs)
+
+
+func(1, 2, 3, name="Alice", age=30)
+# 输出:
+# args: (1, 2, 3)
+# kwargs: {'name': 'Alice', 'age': 30}
+```
+
+* "\*args" 只能传递位置参数，而 "**kwargs" 只能传递关键字参数；
+* 函数定义中，“*args” 必须在 “**kwargs” 之前；
+
+### 11.4 函数参数顺序
+
+在 Python 3 中，函数参数的顺序有固定规则，必须遵循以下顺序：
+
+* 位置参数（Positional Arguments）：函数调用时按顺序提供的参数
+  ```python
+  def func(a, b):
+      return a + b
+  print(func(1, 2))  # 输出: 3
+  ```
+
+* 默认参数（Default Arguments）：为参数提供默认值
+
+  ```python
+  def func(a, b=2):
+      return a + b
+  print(func(1))  # 输出: 3
+  ```
+
+* 可变位置参数（*args）：将多个位置参数打包为元组
+  ```python
+  def func(a, b=2, *args):
+      return sum(args)
+  print(func(1, 2, 3, 4))  # 输出(a:1,b:2,args(3,4) 相加): 7
+  ```
+
+* 关键字参数（Keyword Arguments）：使用 key=value 形式的参数
+
+  ```python
+  def func(a, b=2, *args, c):
+      return a + b + c
+  print(func(1, c=3))  # 输出: 6
+  ```
+
+* 可变关键字参数（**kwargs）：将多个关键字参数打包为字典
+  ```python
+  def func(a, b=2, *args, c, **kwargs):
+      return kwargs
+  print(func(1, 2, 4, 5, c=10, name="Paddy", age=12))  # 输出: {'name': 'Paddy', 'age': 12}
+  ```
+
+**总结**：在定义函数时，参数的顺序依次为：位置参数、默认参数、*args、关键字参数、**kwargs。
+
+### 11.5 "*" 和 "**" 用法
+
+* `“*”` 用法  
+  **位置参数打包**：在函数定义中，“*args” 用于接收任意数量的位置参数，打包为一个元组；
+
+  ```python
+  def func(*args):
+      print(args)
+  
+  func(1, 2, 3)  # 输出: (1, 2, 3)
+  ```
+  
+  **解包可迭代对象**：在函数调用中，* 用于将列表、元组等可迭代对象解包为单独的参数；
+  ```python
+  def add(a, b, c):
+      return a + b + c
+  
+  numbers = [1, 2, 3]
+  print(add(*numbers))  # 输出: 6
+  ```
+ 
+* `“**”` 用法
+
+  **关键字参数打包**：在函数定义中，**kwargs 用于接收任意数量的关键字参数，打包为一个字典;
+  ```python
+  def func(**kwargs):
+      print(kwargs)
+  
+  func(a=1, b=2)  # 输出: {'a': 1, 'b': 2}
+  ```
+  
+  **解包字典**：在函数调用中，** 用于将字典解包为关键字参数;
+  ```python
+  def greet(name, age):
+    print(f"Name: {name}, Age: {age}")
+
+  info = {"name": "Alice", "age": 30}
+  greet(**info)  # 输出: Name: Alice, Age: 30
+  ```
+
+* 示例
+  * 使用运算符解压缩列表并将参数传递给函数时，就好像单独传递了每个参数一样。这意味着可以使用多个解包运算符从多个列表中获取值，并将它们全部传递给单个函数：
+  ```python
+  def my_sum(*args):
+      result = 0
+      for x in args:
+          result += x
+      return result
+    
+  list1 = [1, 2, 3]
+  list2 = [4, 5]
+  list3 = [6, 7, 8, 9]
+    
+  print(my_sum(*list1, *list2, *list3)) # 输出：45
+  ```
+  * 列表拆分为三个不同的部分：显示第一个值、最后一个值以及介于两者之间的所有值
+  
+  ```python
+  my_list = [1, 2, 3, 4, 5, 6]
+  a, *b, c = my_list
+  print(a)  # 输出：1
+  print(b)  # 输出：[2, 3, 4, 5]
+  print(c)  # 输出：6
+  ```
+  * 解包运算符可以拆分任何可迭代对象的项：合并两个列表
+  
+  ```python
+  my_first_list = [1, 2, 3]
+  my_second_list = [4, 5, 6]
+  my_merged_list = [*my_first_list, *my_second_list]
+  
+  print(my_merged_list) # 输出：[1, 2, 3, 4, 5, 6]
+  ```
+  * 解包运算符可以拆分任何可迭代对象的项：合并两个字典
+  
+  ```python
+  my_first_dict = {"A": 1, "B": 2}
+  my_second_dict = {"C": 3, "D": 4}
+  my_merged_dict = {**my_first_dict, **my_second_dict}
+  
+  print(my_merged_dict)  # 输出：{'A': 1, 'B': 2, 'C': 3, 'D': 4}
+  ```
+  * 解包字符串
+  
+  ```python
+  a = [*"HelloWorld!"]
+  print(a)  # 输出：['H', 'e', 'l', 'l', 'o', 'W', 'o', 'r', 'l', 'd', '!']
+  # 或者：
+  *a, = "HelloWorld!"
+  print(a)  # 输出：['H', 'e', 'l', 'l', 'o', 'W', 'o', 'r', 'l', 'd', '!']
+  # 或者：
+  *a, b = "HelloWorld!"
+  print(a)  # 输出：['H', 'e', 'l', 'l', 'o', 'W', 'o', 'r', 'l', 'd']  type(a) => <class 'list'>
+  print(b)  # 输出：！ type(b) => <class 'str'>
+  ```
+
+**注意：** 代码可读性。
