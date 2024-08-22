@@ -23,4 +23,9 @@
     * [10.3 迭代器 (iterator)](docs/python_features.md#103-迭代器-iterator)
     * [10.4 生成器 (generator)](docs/python_features.md#104-生成器-generator)
 * [11. \*args and **kwargs](docs/python_features.md#11-args-and-kwargs)
+    * [11.1 *args](docs/python_features.md#111-args)
+    * [11.2 **kwargs](docs/python_features.md#112-kwargs)
+    * [11.3 混合使用](docs/python_features.md#113-混合使用)
+    * [11.4 函数参数顺序](docs/python_features.md#114-函数参数顺序)
+    * [11.5 "*" 和 "**" 用法](docs/python_features.md#115--和--用法)
 
