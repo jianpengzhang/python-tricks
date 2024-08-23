@@ -1720,4 +1720,108 @@ func(1, 2, 3, name="Alice", age=30)
   print(b)  # 输出：！ type(b) => <class 'str'>
   ```
 
-**注意：** 代码可读性。
+**注意：** 使用解包运算符需要考虑代码可读性。
+
+## 12. 面向切面编程 (AOP) 和装饰器
+
+### 12.1 面向切面编程 (AOP)
+
+面向切面编程（AOP）是一种编程范式，旨在将横切关注点（如日志记录、安全检查、事务管理等）与核心业务逻辑分离，它允许在不修改代码的情况下将这些行为 “切入” 到程序的执行流程中，从而提高代码的模块化程度。在 Python 中，AOP 主要通过装饰器和元类来实现。
+
+* 使用装饰器实现 AOP
+  装饰器是 Python 实现 AOP 的主要工具。通过装饰器，可以在函数执行前后添加额外的行为，如日志记录、性能监控等。
+  
+  ```python
+  def log_execution(func):
+      def wrapper(*args, **kwargs):
+          print(f"Executing {func.__name__}...")
+          result = func(*args, **kwargs)
+          print(f"Finished executing {func.__name__}.")
+          return result
+  
+      return wrapper
+  
+  @log_execution
+  def process_data():
+      print("Processing data...")
+  
+  process_data()
+  ```
+  
+  输出：
+  
+  ```
+  Executing process_data...
+  Processing data...
+  Finished executing process_data.
+  ```
+  
+  在这个示例中，"log_execution" 装饰器为 "process_data" 函数添加了执行日志的功能。
+
+* 使用元类实现 AOP
+
+  元类（metaclass）可以用于更复杂的 AOP 实现，尤其是在需要控制类的创建或修改类的行为时。
+  
+  ```python
+  def log_execution(func):
+      def wrapper(*args, **kwargs):
+          print(f"Executing {func.__name__}...")
+          result = func(*args, **kwargs)
+          print(f"Finished executing {func.__name__}.")
+          return result
+  
+      return wrapper
+  
+  class LoggingMeta(type):
+      """
+      元类：可以在类创建之前修改类的属性和方法，甚至可以改变类的继承结构；
+      目地：在所有方法前后添加日志输出
+      """
+  
+      def __new__(cls, name, bases, dct):
+          """
+          在类创建之前调用，用于控制类的创建过程
+          :param name: 类的名称
+          :param bases: 类的基类
+          :param dct: 类的属性和方法字典
+          """
+          for key, value in dct.items():
+              if callable(value):  # Python callable () 函数，用于检查对象是否可以像函数一样被调用
+                  dct[key] = log_execution(value)  # 可调用对象前后增加日志输出逻辑
+          return super().__new__(cls, name, bases, dct)
+  
+  class MyClass(metaclass=LoggingMeta):
+      def method1(self):
+          print("method1 execution")
+  
+      def method2(self):
+          print("method2 execution")
+  
+  obj = MyClass()
+  obj.method1()
+  obj.method2()
+  
+  ```
+  
+  输出：
+  ```
+  Executing method1...
+  method1 execution
+  Finished executing method1.
+  
+  Executing method2...
+  method2 execution
+  Finished executing method2.
+  ```
+  
+  在这个例子中，LoggingMeta 元类自动为 MyClass 中的所有方法添加日志功能。
+
+**应用场景**
+* 日志记录：在函数或方法执行时自动记录日志;
+* 权限控制：在方法调用前自动检查用户权限;
+* 事务管理：在业务操作前后自动管理数据库事务;
+
+**AOP 的优点**
+* 提高模块化：分离关注点，减少代码重复;
+* 易于维护：通过集中管理跨领域逻辑，简化代码维护;
+* 通过 AOP，开发者可以将日志、权限等横切关注点从业务逻辑中解耦，使代码更加清晰、可维护;

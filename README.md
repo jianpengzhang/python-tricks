@@ -28,4 +28,6 @@
     * [11.3 混合使用](docs/python_features.md#113-混合使用)
     * [11.4 函数参数顺序](docs/python_features.md#114-函数参数顺序)
     * [11.5 "*" 和 "**" 用法](docs/python_features.md#115--和--用法)
+* [12 面向切面编程(AOP)和装饰器](docs/python_features.md#12-面向切面编程-aop-和装饰器)
+    * [12.1 面向切面编程 (AOP)](docs/python_features.md#121-面向切面编程-aop)
 
