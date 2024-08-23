@@ -1825,3 +1825,233 @@ func(1, 2, 3, name="Alice", age=30)
 * 提高模块化：分离关注点，减少代码重复;
 * 易于维护：通过集中管理跨领域逻辑，简化代码维护;
 * 通过 AOP，开发者可以将日志、权限等横切关注点从业务逻辑中解耦，使代码更加清晰、可维护;
+
+### 12.2 装饰器
+
+装饰器是一种函数或类，用于在不改变目标函数或方法的基础上，动态地添加功能。它在 AOP 中经常被用作实现横切关注点的工具。通过在函数或方法前加上 "@decorator_name" 应用装饰器。 
+
+**原理：**
+
+在 Python 中，当你为函数添加装饰器（通过 @decorator 语法）时，Python 解释器会自动将装饰器函数应用到目标函数上。这是 Python 的一个语言特性，在函数定义时就已经生效。
+
+Python 解释器的处理逻辑：  
+
+* 解析函数定义：当 Python 解释器遇到一个使用 “@decorator” 语法的函数定义时，它会立即应用装饰器，而不是等到函数被调用时才应用；
+* 调用装饰器函数：装饰器函数会在函数定义的过程中被调用，它接收被装饰的函数作为参数，并返回一个新的函数或可调用对象；
+* 替换原函数：返回的函数或对象会取代原始函数，这意味着当你调用 “say_hello()” 时，实际上调用的是装饰器返回的包装函数，而不是原函数本身；
+
+如：
+
+```python
+@decorator
+def say_hello():
+    print("Hello!")
+
+# 等效于:
+say_hello = decorator(say_hello)
+```
+
+在 Python 源码中，这种处理是在函数定义阶段完成的。具体来说，Python 在解释函数定义时会检查是否有 @ 标记，如果有，解释器就会调用相应的装饰器函数，并将结果绑定到函数名上。
+
+**示例：**
+
+* 示例1：基本用法
+
+  ```python
+  def my_decorator(func):
+      def wrapper(*args, **kwargs):
+          print("Something before the function")
+          result = func(*args, **kwargs)
+          print("Something after the function")
+          return result
+  
+      return wrapper
+  
+  @my_decorator
+  def say_hello():
+      print("Hello!")
+  
+  say_hello()
+  ```
+  
+  输出：
+  
+  ``` 
+  Something before the function
+  Hello!
+  Something after the function
+  ```
+  
+  此例中，"my_decorator" 装饰器在 "say_hello" 函数前后添加了日志信息。
+
+* 示例2：带参数的装饰器
+
+  装饰器本身也可以接受参数。这种情况下，装饰器会返回另一个装饰器。
+  ```python
+  def repeat(times):
+      # repeat 是一个工厂函数，它返回一个装饰器
+      def decorator(func):
+          # decorator 是实际的装饰器函数，它接受一个函数作为参数
+          def wrapper(*args, **kwargs):
+              #  wrapper 是装饰器内部的包装函数
+              for _ in range(times):
+                  # 使用一个循环，来调用被装饰的函数，循环的次数由 `times` 决定
+                  func(*args, **kwargs)
+  
+          return wrapper
+  
+      return decorator
+  
+  
+  @repeat(times=3)
+  def say_hello():
+      print("Hello!")
+  
+  
+  say_hello()
+  ```
+  
+  输出：  
+  
+  ```
+  Hello!
+  Hello!
+  Hello!
+  ```
+
+  在这个例子中，“@repeat(times=3)” 是一个带参数的装饰器，其实现原理如下：
+
+  * 调用外层函数 repeat(times)：
+    * 当解释器遇到 @repeat(times=3) 时，它首先调用 repeat(3)，此时 times 被设定为 3；
+    * repeat 函数返回一个装饰器函数 decorator；
+  * 调用中间层函数 decorator(func)：
+    * decorator 接收被装饰的函数 say_hello 作为参数，并返回一个包装函数 wrapper；
+  * 调用内层函数 wrapper(*args, **kwargs)：
+    * 每次调用 say_hello("Hello!") 时，实际上调用的是 wrapper 函数；
+    * wrapper 函数内部执行了一个循环，将 say_hello("Hello!") 调用 3 次；
+  * 输出结果：
+    * 最终，say_hello("Hello!") 会输出 3 次 "Hello!"；
+
+* 示例3：类装饰器
+
+  ```python
+  class MyDecorator:
+      def __init__(self, func):
+          self.func = func
+  
+      def __call__(self, *args, **kwargs):
+          """
+          当定义 “__call__” 方法，类的实例（对象）可以像普通函数那样被调用，例 MyDecorator() 即可调用 __call__()
+          :param args:
+          :param kwargs:
+          :return:
+          """
+          print("Before function execution")
+          result = self.func(*args, **kwargs)
+          print("After function execution")
+          return result
+  
+  
+  @MyDecorator
+  def say_hello():
+      print("Hello!")
+  ```
+  
+  输出：
+  
+  ```
+  Before function execution
+  Hello!
+  After function execution
+  ```
+
+* 示例4：嵌套装饰器 (Multiple Decorators)
+
+  嵌套装饰器指的是在一个函数上同时应用多个装饰器。多个装饰器会从内到外依次应用，这意味着最内层的装饰器最后执行。
+  
+  ```python
+  def decorator_one(func):
+      def wrapper(*args, **kwargs):
+          print("Decorator One")
+          return func(*args, **kwargs)
+  
+      return wrapper
+  
+  
+  def decorator_two(func):
+      def wrapper(*args, **kwargs):
+          print("Decorator Two")
+          return func(*args, **kwargs)
+  
+      return wrapper
+  
+  
+  @decorator_one
+  @decorator_two
+  def say_hello():
+      print("Hello!")
+  
+  
+  say_hello()
+  ```
+  
+  输出：
+  
+  ```
+  Decorator One
+  Decorator Two
+  Hello!
+  ```
+  
+  "decorator_two" 装饰器先作用于 “say_hello”，然后 “decorator_one” 装饰器再作用于被 “decorator_two” 装饰的函数，装饰器执行则从最外往里推进执行："decorator_one" -> "decorator_two"；
+
+* 示例5：装饰器用于类实例方法、类方法和静态方法
+
+  ```python
+  def timing_decorator(func):
+      import time
+      def wrapper(*args, **kwargs):
+          start_time = time.time()
+          result = func(*args, **kwargs)
+          end_time = time.time()
+          print(f"{func.__name__} took {end_time - start_time} seconds")
+          return result
+  
+      return wrapper
+  
+  
+  class MyClass:
+      @timing_decorator
+      def instance_method(self):
+          print("Instance method")
+  
+      @classmethod
+      @timing_decorator
+      def class_method(cls):
+          print("Class method")
+  
+      @staticmethod
+      @timing_decorator
+      def static_method():
+          print("Static method")
+  
+  
+  obj = MyClass()
+  obj.instance_method()
+  obj.class_method()
+  obj.static_method()
+  ```
+  
+  输出：
+  
+  ```
+  Instance method
+  instance_method took 2.384185791015625e-06 seconds
+  Class method
+  class_method took 1.9073486328125e-06 seconds
+  Static method
+  static_method took 1.430511474609375e-06 seconds
+  ```
+  
+  装饰器不仅能装饰普通函数，还可以用于类实例方法、类方法和静态方法，装饰器 “timing_decorator” 记录了函数执行所花费的时间。
+

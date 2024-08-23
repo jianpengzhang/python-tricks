@@ -30,4 +30,5 @@
     * [11.5 "*" 和 "**" 用法](docs/python_features.md#115--和--用法)
 * [12 面向切面编程(AOP)和装饰器](docs/python_features.md#12-面向切面编程-aop-和装饰器)
     * [12.1 面向切面编程 (AOP)](docs/python_features.md#121-面向切面编程-aop)
+    * [12.2 装饰器](docs/python_features.md#122-装饰器)
 
