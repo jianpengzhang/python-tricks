@@ -32,4 +32,7 @@
     * [12.1 面向切面编程 (AOP)](docs/python_features.md#121-面向切面编程-aop)
     * [12.2 装饰器](docs/python_features.md#122-装饰器)
 * [13 闭包 (closure)](docs/python_features.md#13-闭包-closure)
+    * [13.1 函数作用域](docs/python_features.md#131-函数作用域)
+    * [13.2 嵌套函数](docs/python_features.md#132-嵌套函数)
+    * [13.3 闭包](docs/python_features.md#133-闭包)
 
