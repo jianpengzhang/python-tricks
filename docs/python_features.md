@@ -2057,5 +2057,275 @@ say_hello = decorator(say_hello)
 
 **总结：**  装饰器通过闭包（后面会详细介绍）将额外功能嵌入到原函数的调用过程中，利用函数的可传递性和可返回性（函数作为一等公民），实现代码复用和逻辑的分离。
 
-## 13. 闭包
+## 13. 闭包 (closure)
+
+闭包和函数紧密联系在一起，介绍闭包前先介绍一些背景知识：如，变量的作用域、嵌套函数等概念。
+
+### 13.1 函数作用域
+
+在 Python 中，作用域（Scope）决定了变量的可见性和生命周期。主要分为以下四种作用域，遵循 LEGB （Local、Enclosing、Global、Built-in） 规则查找变量：
+
+* 局部作用域（Local Scope）：  
+  **定义：** 在函数内部定义的变量，作用范围仅限于该函数内部；  
+  **特点：** 函数调用结束后，局部变量被销毁；  
+  **示例：**
+  ```python
+  def my_function():
+    x = 10  # 局部变量 x
+    print(x)
+  my_function()  # 输出: 10
+  ```
+* 嵌套作用域（Enclosing Scope）：    
+  **定义：** 在嵌套函数中，内部函数可以访问外部函数的变量；    
+  **特点：** 外部函数的变量在内部函数中继续存在，形成闭包；  
+  **示例：**
+  ```python
+  def outer_function():
+      x = 5
+      def inner_function():
+          print(x)  # 可以访问外部函数的变量
+      return inner_function
+  inner = outer_function()
+  inner()  # 输出: 5 
+  ```
+* 全局作用域（Global Scope）：  
+  **定义：** 在函数外部定义的变量，可以在整个模块中访问；    
+  **特点：** 全局变量在模块的任何地方都可以访问，甚至可以通过 global 关键字在函数内部修改；  
+  **示例：**  
+  ```python
+  x = 20  # 全局变量
+  def my_function():
+      global x
+      x = 30  # 修改全局变量
+  my_function()
+  print(x)  # 输出: 30
+  ```
+* 内置作用域（Built-in Scope）：  
+  **定义：** Python 解释器提供的内置命名空间，包括内置函数、异常等；     
+  **示例：**  使用 Python 提供的 len()、print() 函数；  
+  ```python
+  print(len("hello"))  # 输出: 5
+  ```
+  
+**LEGB 规则**  
+
+Python 查找变量时按照 LEGB 顺序进行查找：
+
+  `Local`：局部作用域，函数内部变量；  
+  `Enclosing`：嵌套函数的外部函数中的变量；  
+  `Global`：全局作用域，模块级别变量；  
+  `Built-in`：内置作用域，Python 预定义的名称；    
+
+### 13.2 嵌套函数
+
+嵌套函数是指在一个函数内部定义的另一个函数。内部函数可以访问外部函数的变量，但外部函数不能访问内部函数的变量。
+
+示例：嵌套函数可以将相关的功能逻辑封装在一起，使代码更结构化和清晰。例如，外部函数可以定义一个通用的处理逻辑，而内部函数可以处理特定的细节。  
+
+```python
+def foo(): 
+   #foo是外围函数 
+   a = 1 
+   # printer是嵌套函数 
+   def printer(): 
+       print(a)
+   printer() 
+foo() # 1
+```
+示例中的变量 a 可以被嵌套函数 printer 正常访问。
+
+嵌套函数与闭包密切相关，闭包是指内部函数保留了对外部函数局部变量的引用，即使外部函数执行完毕后，内部函数仍然可以访问这些变量。闭包广泛用于函数工厂、装饰器等场景中。
+
+### 13.3 闭包
+
+#### 13.3.1 闭包
+闭包是指在一个函数内部定义的函数，这个内部函数可以访问外部函数的变量，即使外部函数已经返回。这种机制可以保持外部函数的变量在内部函数中的状态。 同时，闭包是函数式编程的重要语法结构，也是一种代码组织结构，提高了代码的可重复使用性。
+
+创建一个闭包必须满足以下几点:
+* 嵌套函数：必须有一个外部函数和一个内部函数。内部函数在外部函数内部定义；
+* 访问外部变量：内部函数必须引用外部函数的变量（即外部函数的局部变量）；
+* 外部函数返回内部函数：外部函数必须返回内部函数，这样外部函数的作用域就会通过内部函数“延续”；
+* 外部函数已执行结束：外部函数执行结束后，返回的内部函数依然可以访问外部函数中的局部变量；
+
+原理：
+
+闭包的原理在于函数的作用域链和变量的生命周期。当一个函数在另一个函数内部定义时，内部函数可以访问外部函数的局部变量。如果外部函数返回了内部函数，并且该内部函数在外部被调用，Python 解释器会将这些外部变量保存在内部函数的环境中，即使外部函数的执行已经结束。这种机制让内部函数能够“记住”外部函数中的变量值。
+
+关键点:
+
+* 作用域链：内部函数能够访问外部函数的局部变量；
+* 延迟绑定：变量值在函数调用时确定；
+* 持久化环境：即使外部函数结束，内部函数仍能访问外部变量；
+
+示例1：  
+
+```python
+def outer_function(x):
+    def inner_function(y):
+        return x + y  # 这里 x 是外部函数的变量
+    return inner_function
+
+add_five = outer_function(5)
+print(add_five(3))  # 输出: 8
+```
+
+当 outer_function 返回 inner_function 时，x 被保存在 inner_function 的环境中。 当调用 add_five(3) 时，x 的值已经确定，但仍可以在闭包中被访问。
+
+示例2：局部变量在函数外被访问
+
+```python
+def foo(): 
+   #foo是外围函数 
+   a = 1 
+   # printer是嵌套函数 
+   def printer(): 
+       print(a)
+   return printer
+x = foo() 
+x() # 1
+```
+
+函数中的局部变量仅在函数的执行期间可用，一旦 foo() 执行过后，我们会认为变量 a 将不再可用。然而，在这里我们发现 foo 执行完之后，在调用 x 的时候 a 变量的值正常输出了，这就是闭包的作用，闭包使得局部变量在函数外被访问成为可能。
+
+#### 13.3.2 使用场景
+  * 保持状态（例如：计数器）
+    闭包可以用来保持函数的内部状态，在不使用类的情况下实现类似对象的行为。
+    ```python
+    def counter():
+      count = 0
+  
+      def increment():
+          # 使用 `nonlocal` 关键字，可以在内部函数中修改外部函数的变量
+          nonlocal count
+          count += 1
+          return count
+  
+      return increment
+
+    counter_func1 = counter()
+    print(counter_func1())  # 输出: 1
+    print(counter_func1())  # 输出: 2
+    print(counter_func1())  # 输出: 3
+    counter_func2 = counter()
+    print(counter_func2())  # 输出: 1
+    ```
+  * 延迟计算： 闭包可以将某些计算延迟到函数实际调用时再进行。
+    延迟计算可以用来优化性能，避免不必要的计算，只有在需要时才进行计算。以下是一个延迟计算的示例：
+    ```python
+    def lazy_addition(a, b):
+        def compute():
+            print("计算开始...")
+            return a + b
+        return compute
+
+    result = lazy_addition(10, 20)
+
+    # 延迟计算，不调用则不计算
+    print(result())  # 输出: 计算开始... 30
+    ```
+    compute 是一个闭包，它保存了 a 和 b 的值，并在需要时才进行计算。
+  
+  * 回调函数： 使用闭包实现回调函数
+    假设我们有一个异步操作（比如模拟的网络请求），当操作完成时，我们需要调用一个回调函数处理结果。
+    ```python
+    import time
+    
+    
+    def async_operation(callback):
+        print("开始异步操作...")
+        time.sleep(2)  # 模拟耗时操作
+        result = "数据处理完成"
+        callback(result)
+    
+    
+    def callback_factory(user):
+        def callback(result):
+            print(f"{user} 接收到异步操作的结果: {result}")
+    
+        return callback
+    
+    
+    # 为不同用户生成不同的回调函数
+    callback_for_alice = callback_factory("Alice")
+    callback_for_bob = callback_factory("Bob")
+    
+    # 进行异步操作并传入回调函数
+    async_operation(callback_for_alice)  # Alice 接收到异步操作的结果: 数据处理完成
+    async_operation(callback_for_bob)  # Bob 接收到异步操作的结果: 数据处理完成
+    ```
+
+    * callback_factory 是一个闭包工厂函数，根据 user 参数生成不同的回调函数；
+    * callback 函数被传递给 async_operation，用于在异步操作完成后处理结果；
+    * 由于闭包的特性，每个回调函数都记住了 user 的值，即使在异步操作执行过程中 user 的值不会改变；
+    
+    **使用场景：**
+    * 异步编程：在异步操作中，闭包可以保留状态，并在操作完成时传递给回调函数；
+    * 事件驱动编程：闭包可以用于定义不同的事件处理函数，并根据不同的上下文信息生成回调函数；
+    
+  * 函数工厂
+    闭包可以用来创建带参数的函数工厂，根据不同的参数生成不同的函数。
+    ```python
+    def power_factory(exponent):
+        def power(base):
+            return base ** exponent
+    
+        return power
+    
+    
+    # 创建平方函数
+    square = power_factory(2)
+    print(square(4))  # 输出: 16
+    
+    # 创建立方函数
+    cube = power_factory(3)
+    print(cube(2))  # 输出: 8
+    ```
+    * power_factory 是一个外部函数，它接受一个 exponent 参数；
+    * power 是一个内部函数，计算 base 的 exponent 次幂；
+    * power_factory 返回 power 函数，创建一个带有特定指数的函数（如平方或立方）；
+
+  * 延迟计算的函数工厂
+    ```python
+    def delayed_computation_factory(operation, x, y):
+        def computation():
+            print("开始计算...")
+            result = operation(x, y)
+            return result
+        return computation
+    
+    # 定义一些操作函数
+    def add(a, b):
+        return a + b
+    
+    def multiply(a, b):
+        return a * b
+    
+    # 创建延迟计算的闭包
+    delayed_add = delayed_computation_factory(add, 10, 20)
+    delayed_multiply = delayed_computation_factory(multiply, 5, 6)
+    
+    # 执行计算
+    print(delayed_add())       # 输出: 开始计算... 30
+    print(delayed_multiply())  # 输出: 开始计算... 30
+    ```
+    
+    * 函数工厂：delayed_computation_factory 是一个函数工厂，它接受一个操作函数 operation 以及两个操作数 x 和 y，并返回一个闭包 computation；
+    * 闭包：computation 是一个闭包，保存了外部函数的参数和操作逻辑，只有在调用时才执行计算；
+    * 延迟计算：计算过程不会在创建闭包时执行，而是等到调用闭包时才执行；
+
+#### 13.3.3 面试示例（闭包、嵌套函数、作用域）
+
+* 闭包
+  * 什么是闭包？请解释它的工作原理？
+    闭包是指在一个函数内部定义另一个函数，并且内部函数引用了外部函数中的变量。即使外部函数已执行完毕并返回，内部函数仍能访问这些变量。闭包通常用于工厂函数、延迟计算、回调函数等场景。
+  * 闭包的优点是什么？它如何帮助你在函数外部保存状态？
+    闭包允许在函数外部保存状态，避免使用全局变量，使代码更模块化和安全。通过闭包，函数可以捕获并“记住”外部环境中的变量，并在将来调用时使用这些变量。
+  * 闭包与全局变量相比有什么优势？ 
+    闭包提供了更好的封装性，可以避免全局命名空间污染和意外修改，同时保持状态。
+* 嵌套函数
+  * 什么是嵌套函数？在什么情况下使用嵌套函数？
+    嵌套函数是定义在另一个函数内部的函数。它用于封装逻辑、实现闭包或访问外部函数的变量。
+  * 请解释嵌套函数如何访问外部函数的变量?
+  
+  * 如何通过嵌套函数实现信息隐藏或封装？
 
