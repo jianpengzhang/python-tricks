@@ -2514,3 +2514,129 @@ Python 极大的灵活性，使其能够支持高级编程模式，如函数式�
   ```
   本例中，event_handlers 字典将事件类型映射到对应的回调函数，并在事件触发时调用相应的函数。
 
+## 15. 鸭子类型 (Duck typing)
+
+### 15.1 鸭子类型
+
+鸭子类型（Duck Typing）是一种动态类型语言中的编程概念，它源于 “如果一只鸟走起来像鸭子，游起来像鸭子，叫起来也像鸭子，那么它就是一只鸭子”的哲学。
+在鸭子类型中，对象的实际类型并不重要，只要它实现了所需的方法或行为，就可以被认为是所需的类型。这意味着不需要明确的接口或继承关系，只要对象 “表现” 得像某种类型，它就可以被使用。
+
+**应用场景：**
+
+* 多态性  
+  在鸭子类型中，函数或方法可以接受任何类型的对象，只要该对象实现了必要的方法。例如，在一个函数中传入任意对象，只要该对象有 run() 方法，函数就可以正常执行。
+* 灵活性  
+  鸭子类型使代码更灵活，因为它不依赖于对象的具体类型或类层次结构。你可以传入不同类型的对象，只要它们有所需的行为。
+* 简化代码  
+  通过鸭子类型，代码不再需要大量的类型检查或复杂的继承关系，代码变得更简洁易读。
+
+**示例说明：**
+
+```python
+class Dog:
+    def speak(self):
+        return "Woof!"
+
+class Cat:
+    def speak(self):
+        return "Meow!"
+
+def animal_sound(animal):
+    return animal.speak()
+
+dog = Dog()
+cat = Cat()
+
+print(animal_sound(dog))  # 输出: Woof!
+print(animal_sound(cat))  # 输出: Meow!
+```
+上述示例，animal_sound 函数不关心传入的对象是 Dog 还是 Cat，只要对象有 speak() 方法，它就可以工作。
+
+**优势：**
+
+* 灵活性高：代码可以处理更多不同类型的对象；
+* 降低耦合：减少了对特定类或接口的依赖；
+* 提高可扩展性：更容易扩展代码，只需确保新对象实现必要的方法即可；
+
+**面试示例：**
+
+* 什么是鸭子类型？与静态类型检查有何区别？  
+  鸭子类型是一种动态类型检查方式，不关心对象的实际类型，只要对象实现了所需的方法或行为即可使用。与静态类型检查不同，鸭子类型在运行时确定对象是否符合预期，而静态类型检查在编译时通过类型声明来确定。
+* 鸭子类型的优点和缺点是什么？  
+  优点：灵活性高，代码更易于扩展和复用，降低了对特定类或接口的依赖；  
+  缺点：可能导致运行时错误，代码可读性和维护性降低，缺乏编译时的类型安全性；
+
+
+### 15.2 使用场景用例
+
+* 场景1：处理不同类型的日志记录器
+
+  假设你有多个不同类型的日志记录器，如文件日志记录器和数据库日志记录器，它们都有一个 log 方法。你可以使用鸭子类型来处理这些不同的记录器，而不需要担心它们的具体类型。
+
+  ```python
+    class FileLogger:
+        def log(self, message):
+            print(f"Logging to a file: {message}")
+    
+    class DatabaseLogger:
+        def log(self, message):
+            print(f"Logging to a database: {message}")
+    
+    def log_message(logger, message):
+        logger.log(message)
+    
+    file_logger = FileLogger()
+    db_logger = DatabaseLogger()
+    
+    log_message(file_logger, "This is a file log") # 输出：Logging to a file: This is a file log
+    log_message(db_logger, "This is a database log") # 输出：Logging to a database: This is a database log
+  ```
+  
+* 场景2：处理不同格式的数据
+
+  假设你有不同格式的数据处理器，如 CSV 和 JSON 数据处理器。只要它们实现了相同的 process 方法，你就可以使用鸭子类型来统一处理。
+
+  ```python
+    class CSVProcessor:
+        def process(self, data):
+            print("Processing CSV data")
+    
+    class JSONProcessor:
+        def process(self, data):
+            print("Processing JSON data")
+    
+    def process_data(processor, data):
+        processor.process(data)
+    
+    csv_processor = CSVProcessor()
+    json_processor = JSONProcessor()
+    
+    process_data(csv_processor, "csv_data")
+    process_data(json_processor, "json_data")
+    
+  ```
+  
+* 场景3：数据转换器的使用  
+
+  假设你有一个项目中需要将数据从一种格式转换为另一种格式，有不同的转换器实现了相同的 convert 方法。
+
+  ```python
+    class JSONConverter:
+        def convert(self, data):
+            print("Converting data to JSON")
+    
+    class XMLConverter:
+        def convert(self, data):
+            print("Converting data to XML")
+    
+    def convert_data(converter, data):
+        converter.convert(data)
+    
+    json_converter = JSONConverter()
+    xml_converter = XMLConverter()
+    
+    convert_data(json_converter, "some_data")
+    convert_data(xml_converter, "some_data")
+  ```
+  
+综上：原理一致，鸭子类型使得代码可以更加灵活和易于扩展，因为它依赖于对象的行为而非具体类型。这种编程风格尤其适用于需要处理多种类型对象但只关心它们所需行为的场景。
