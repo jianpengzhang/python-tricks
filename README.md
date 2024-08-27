@@ -35,4 +35,5 @@
     * [13.1 函数作用域](docs/python_features.md#131-函数作用域)
     * [13.2 嵌套函数](docs/python_features.md#132-嵌套函数)
     * [13.3 闭包](docs/python_features.md#133-闭包)
+* [14 函数是一等公民 (First-Class Citizens)](docs/python_features.md#14-函数是一等公民-first-class-citizens)
 
