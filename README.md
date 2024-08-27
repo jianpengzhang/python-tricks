@@ -37,4 +37,5 @@
     * [13.3 闭包](docs/python_features.md#133-闭包)
 * [14 函数是一等公民 (First-Class Citizens)](docs/python_features.md#14-函数是一等公民-first-class-citizens)
 * [15 鸭子类型 (Duck typing)](docs/python_features.md#15-鸭子类型-duck-typing)
+* [16 Python 中重载](docs/python_features.md#16-python-中重载)
 

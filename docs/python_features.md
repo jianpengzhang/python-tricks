@@ -2640,3 +2640,97 @@ print(animal_sound(cat))  # 输出: Meow!
   ```
   
 综上：原理一致，鸭子类型使得代码可以更加灵活和易于扩展，因为它依赖于对象的行为而非具体类型。这种编程风格尤其适用于需要处理多种类型对象但只关心它们所需行为的场景。
+
+## 16. Python 中重载
+
+函数重载是指在同一个作用域内定义多个同名函数，但它们的参数数量或类型不同，函数重载允许在调用时根据传入的参数自动选择合适的函数版本。 其主要是为了解决两个问题：
+
+* 可变参数类型；
+* 可变参数个数；
+
+**Python 中的重载**
+
+Python 不支持传统意义上的方法重载，即根据参数类型或数量来定义同名函数，如果在同一作用域内定义两个同名函数，后定义的函数会覆盖之前的定义。
+对于重载解决的问题，Python 提供了一些机制可以实现类似于重载的功能：
+
+* 可变参数类型：Python 作为动态类型语言，能够接受任意类型的参数，因此不需要为不同类型参数定义多个函数；
+  ```python
+  # 使用可变参数 (*args 和 **kwargs) 可以处理任意数量的参数，从而模拟函数重载的行为
+  def add(*args):
+    return sum(args)
+
+  print(add(1, 2))             # 输出: 3
+  print(add(1, 2, 3, 4))       # 输出: 10
+  ```
+* 可变参数个数：对于参数个数不同的情况，Python 通过默认参数（即缺省参数）来实现，因此也不需要函数重载机制；
+  ```python
+    # 通过使用默认参，模拟函数重载机制
+    def greet(name, message="Hello"):
+        return f"{message}, {name}!"
+    
+    print(greet("Alice"))        # 输出: Hello, Alice!
+    print(greet("Bob", "Hi"))    # 输出: Hi, Bob!
+  ```
+* 【不推荐】基于类型的条件判断：通过使用条件判断，可以根据参数类型实现不同的行为。
+  ```python
+    from functools import singledispatch
+
+    @singledispatch
+    def process(data):
+        print("Default processing", data)
+    
+    @process.register(int)
+    def _(data):
+        print("Processing integer", data)
+    
+    @process.register(list)
+    def _(data):
+        print("Processing list", data)
+    
+    process(10)  # 输出: Processing integer 10
+    process([1, 2, 3])  # 输出: Processing list [1, 2, 3]
+    process("hello")  # 输出: Default processing hello
+  ``` 
+* 【推荐】`functools.singledispatch`：基于参数类型的函数重载。  
+  `functools.singledispatch` 是 Python 3.4 引入的一个装饰器，用于实现基于参数类型的函数重载。它允许你定义一个通用函数，然后根据传递的第一个参数类型自动调用相应的特定版本。这种单分派机制在需要对不同类型的输入进行不同处理时非常有用。
+  
+  **使用方法：**   
+  * 使用 @singledispatch 装饰器定义一个通用函数；
+  * 使用 @<generic_function>.register 为不同的类型定义特化版本；
+  
+  **主要功能：**
+  * 单一分派：基于第一个参数的类型调用不同的函数；
+  * 扩展性：可以通过 @<base_function>.register(type) 来注册新的类型处理函数，而不需要修改原函数；
+  * 默认行为：未注册的类型会调用默认的基函数；
+
+  **示例：**
+  ```python
+    from functools import singledispatch
+    
+    @singledispatch
+    def process(data):
+        return data
+    
+    @process.register(list)
+    def _(data):
+        return [x * 2 for x in data]
+    
+    @process.register(dict)
+    def _(data):
+        return {k: v * 2 for k, v in data.items()}
+    
+    print(process([1, 2, 3]))    # 输出: [2, 4, 6]
+    print(process({"a": 1}))     # 输出: {'a': 2}
+  ``` 
+  应用场景：
+  * 处理多种输入类型：如上例的 process 函数，可以根据输入类型执行不同的逻辑，常用于数据处理函数中；
+  * API 设计：在设计 API 时，可以允许函数接受不同形式的输入，提供更灵活的接口；
+  * 面向对象编程：在类的设计中，可以使用多态性来实现方法的重载行为；
+  * 简化代码结构，避免多个 if-elif 语句；
+
+**面试示例**
+* Python 中是否支持方法重载？如何模拟重载？  
+Python 不支持传统的重载，但可以通过默认参数、*args、**kwargs 或 functools.singledispatch 来模拟重载行为。
+
+* 解释 functools.singledispatch 的用途及其工作原理  
+singledispatch 是 Python 3.4+ 提供的一个装饰器，用于创建基于参数类型的泛型函数。通过注册不同类型的处理函数，可以实现基于类型的多态行为。
