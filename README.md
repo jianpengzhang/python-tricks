@@ -39,4 +39,5 @@
 * [15 鸭子类型 (Duck typing)](docs/python_features.md#15-鸭子类型-duck-typing)
 * [16 Python 中重载](docs/python_features.md#16-python-中重载)
 * [17 新式类和旧式类](docs/python_features.md#17-新式类和旧式类)
+* [18 __new__和__init__区别](docs/python_features.md#18-__new__和__init__区别)
 
