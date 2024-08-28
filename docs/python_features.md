@@ -40,16 +40,16 @@ Python 中函数参数传递本质上是 “传对象引用”，这意味着在
 
   示例：
 
-    ```python
-    a = 1
-    def fun(a):
-        print("func_in", id(a))  # func_in 12178984
-        a = 2
-        print("re-point", id(a), id(2))  # re-point 12179016 12179016
-    print("func_out", id(a), id(1))  # func_out 12178984 12178984
-    fun(a)
-    print(a)  # 1
-    ```
+  ```python
+  a = 1
+  def fun(a):
+      print("func_in", id(a))  # func_in 12178984
+      a = 2
+      print("re-point", id(a), id(2))  # re-point 12179016 12179016
+  print("func_out", id(a), id(1))  # func_out 12178984 12178984
+  fun(a)
+  print(a)  # 1
+  ```
   解释：函数内部的 a 修改并不会影响外部的 a，因为 int 是不可变类型。
 * 可变类型的参数传递：  
   当将 “可变类型” 作为参数传递给函数时，函数内部对参数内容的修改会影响外部的变量。这是因为可变类型的对象内容可以被直接修改，而不会创建新的对象。
@@ -149,27 +149,27 @@ class MyClass(metaclass=MyMeta):
   单例模式是一种设计模式，保证一个类只有一个实例。通过元类可以控制类的实例化过程，从而实现单例模式。
 
   ```python
-    class SingletonMeta(type):
-        _instances = {}
-    
-        def __call__(cls, *args, **kwargs):
-            if cls not in cls._instances:
-                cls._instances[cls] = super().__call__(*args, **kwargs)
-            return cls._instances[cls]
-    
-    
-    class SingletonClass(metaclass=SingletonMeta):
-        def __init__(self, value):
-            self.value = value
+  class SingletonMeta(type):
+      _instances = {}
+  
+      def __call__(cls, *args, **kwargs):
+          if cls not in cls._instances:
+              cls._instances[cls] = super().__call__(*args, **kwargs)
+          return cls._instances[cls]
     
     
-    obj1 = SingletonClass(1)
-    obj2 = SingletonClass(2)
+  class SingletonClass(metaclass=SingletonMeta):
+      def __init__(self, value):
+          self.value = value
     
-    print(f"obj1:{id(obj1)}, obj2:{id(obj2)}")
-    print(obj1 is obj2)  # True
-    print(obj1.value)  # 1
-    print(obj2.value)  # 1
+    
+  obj1 = SingletonClass(1)
+  obj2 = SingletonClass(2)
+    
+  print(f"obj1:{id(obj1)}, obj2:{id(obj2)}")
+  print(obj1 is obj2)  # True
+  print(obj1.value)  # 1
+  print(obj2.value)  # 1
   ```
   **解释**："SingletonMeta" 是一个元类，通过重载 `__call__` 方法来确保每次实例化类时，返回的都是同一个实例。
 
@@ -1485,8 +1485,8 @@ with open(currPath + '/demo.py') as file:
   示例3（高级）：生成器委托，使用 yield from 委托子生成器，简化嵌套生成器的调用
   ```python
   def sub_generator():
-  yield 1
-  yield 5
+      yield 1
+      yield 5
 
   def main_generator():
       yield from sub_generator()
@@ -2574,22 +2574,22 @@ print(animal_sound(cat))  # 输出: Meow!
   假设你有多个不同类型的日志记录器，如文件日志记录器和数据库日志记录器，它们都有一个 log 方法。你可以使用鸭子类型来处理这些不同的记录器，而不需要担心它们的具体类型。
 
   ```python
-    class FileLogger:
-        def log(self, message):
-            print(f"Logging to a file: {message}")
+  class FileLogger:
+      def log(self, message):
+          print(f"Logging to a file: {message}")
     
-    class DatabaseLogger:
-        def log(self, message):
-            print(f"Logging to a database: {message}")
+  class DatabaseLogger:
+      def log(self, message):
+          print(f"Logging to a database: {message}")
     
-    def log_message(logger, message):
-        logger.log(message)
+  def log_message(logger, message):
+      logger.log(message)
     
-    file_logger = FileLogger()
-    db_logger = DatabaseLogger()
+  file_logger = FileLogger()
+  db_logger = DatabaseLogger()
     
-    log_message(file_logger, "This is a file log") # 输出：Logging to a file: This is a file log
-    log_message(db_logger, "This is a database log") # 输出：Logging to a database: This is a database log
+  log_message(file_logger, "This is a file log") # 输出：Logging to a file: This is a file log
+  log_message(db_logger, "This is a database log") # 输出：Logging to a database: This is a database log
   ```
   
 * 场景2：处理不同格式的数据
@@ -2673,23 +2673,23 @@ Python 不支持传统意义上的方法重载，即根据参数类型或数量�
   ```
 * 【不推荐】基于类型的条件判断：通过使用条件判断，可以根据参数类型实现不同的行为。
   ```python
-    from functools import singledispatch
+  from functools import singledispatch
 
-    @singledispatch
-    def process(data):
-        print("Default processing", data)
+  @singledispatch
+  def process(data):
+      print("Default processing", data)
     
-    @process.register(int)
-    def _(data):
-        print("Processing integer", data)
+  @process.register(int)
+  def _(data):
+      print("Processing integer", data)
     
-    @process.register(list)
-    def _(data):
-        print("Processing list", data)
+  @process.register(list)
+  def _(data):
+      print("Processing list", data)
     
-    process(10)  # 输出: Processing integer 10
-    process([1, 2, 3])  # 输出: Processing list [1, 2, 3]
-    process("hello")  # 输出: Default processing hello
+  process(10)  # 输出: Processing integer 10
+  process([1, 2, 3])  # 输出: Processing list [1, 2, 3]
+  process("hello")  # 输出: Default processing hello
   ``` 
 * 【推荐】`functools.singledispatch`：基于参数类型的函数重载。  
   `functools.singledispatch` 是 Python 3.4 引入的一个装饰器，用于实现基于参数类型的函数重载。它允许你定义一个通用函数，然后根据传递的第一个参数类型自动调用相应的特定版本。这种单分派机制在需要对不同类型的输入进行不同处理时非常有用。
@@ -2705,22 +2705,22 @@ Python 不支持传统意义上的方法重载，即根据参数类型或数量�
 
   **示例：**
   ```python
-    from functools import singledispatch
+  from functools import singledispatch
     
-    @singledispatch
-    def process(data):
-        return data
+  @singledispatch
+  def process(data):
+      return data
     
-    @process.register(list)
-    def _(data):
-        return [x * 2 for x in data]
+  @process.register(list)
+  def _(data):
+      return [x * 2 for x in data]
     
-    @process.register(dict)
-    def _(data):
-        return {k: v * 2 for k, v in data.items()}
+  @process.register(dict)
+  def _(data):
+      return {k: v * 2 for k, v in data.items()}
     
-    print(process([1, 2, 3]))    # 输出: [2, 4, 6]
-    print(process({"a": 1}))     # 输出: {'a': 2}
+  print(process([1, 2, 3]))    # 输出: [2, 4, 6]
+  print(process({"a": 1}))     # 输出: {'a': 2}
   ``` 
   应用场景：
   * 处理多种输入类型：如上例的 process 函数，可以根据输入类型执行不同的逻辑，常用于数据处理函数中；
@@ -2734,3 +2734,5 @@ Python 不支持传统的重载，但可以通过默认参数、*args、**kwargs
 
 * 解释 functools.singledispatch 的用途及其工作原理  
 singledispatch 是 Python 3.4+ 提供的一个装饰器，用于创建基于参数类型的泛型函数。通过注册不同类型的处理函数，可以实现基于类型的多态行为。
+
+## 17. 新式类和旧式类
