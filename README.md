@@ -40,4 +40,5 @@
 * [16 Python 中重载](docs/python_features.md#16-python-中重载)
 * [17 新式类和旧式类](docs/python_features.md#17-新式类和旧式类)
 * [18 __new__和__init__区别](docs/python_features.md#18-__new__和__init__区别)
+* [19 设计模式](docs/python_features.md#19-设计模式)
 
