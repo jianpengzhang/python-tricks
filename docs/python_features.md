@@ -2597,22 +2597,22 @@ print(animal_sound(cat))  # 输出: Meow!
   假设你有不同格式的数据处理器，如 CSV 和 JSON 数据处理器。只要它们实现了相同的 process 方法，你就可以使用鸭子类型来统一处理。
 
   ```python
-    class CSVProcessor:
-        def process(self, data):
-            print("Processing CSV data")
+  class CSVProcessor:
+      def process(self, data):
+          print("Processing CSV data")
     
-    class JSONProcessor:
-        def process(self, data):
-            print("Processing JSON data")
+  class JSONProcessor:
+      def process(self, data):
+          print("Processing JSON data")
     
-    def process_data(processor, data):
-        processor.process(data)
+  def process_data(processor, data):
+      processor.process(data)
     
-    csv_processor = CSVProcessor()
-    json_processor = JSONProcessor()
+  csv_processor = CSVProcessor()
+  json_processor = JSONProcessor()
     
-    process_data(csv_processor, "csv_data")
-    process_data(json_processor, "json_data")
+  process_data(csv_processor, "csv_data")
+  process_data(json_processor, "json_data")
     
   ```
   
@@ -2664,12 +2664,12 @@ Python 不支持传统意义上的方法重载，即根据参数类型或数量�
   ```
 * 可变参数个数：对于参数个数不同的情况，Python 通过默认参数（即缺省参数）来实现，因此也不需要函数重载机制；
   ```python
-    # 通过使用默认参，模拟函数重载机制
-    def greet(name, message="Hello"):
-        return f"{message}, {name}!"
+  # 通过使用默认参，模拟函数重载机制
+  def greet(name, message="Hello"):
+      return f"{message}, {name}!"
     
-    print(greet("Alice"))        # 输出: Hello, Alice!
-    print(greet("Bob", "Hi"))    # 输出: Hi, Bob!
+  print(greet("Alice"))        # 输出: Hello, Alice!
+  print(greet("Bob", "Hi"))    # 输出: Hi, Bob!
   ```
 * 【不推荐】基于类型的条件判断：通过使用条件判断，可以根据参数类型实现不同的行为。
   ```python
@@ -2736,3 +2736,168 @@ Python 不支持传统的重载，但可以通过默认参数、*args、**kwargs
 singledispatch 是 Python 3.4+ 提供的一个装饰器，用于创建基于参数类型的泛型函数。通过注册不同类型的处理函数，可以实现基于类型的多态行为。
 
 ## 17. 新式类和旧式类
+
+在 Python 中，类（Class）是一种用于创建对象的模板。Python 类主要分为旧式类（Classic Class）和新式类（New-Style Class），两者主要区别在于它们在类的继承和方法解析方面的行为。
+
+**【注意】：** 在 Python 3 中，旧式类已经完全被废弃。因此，了解旧式类的存在和基本区别对理解历史上下文有帮助，但在实际应用中不再需要处理旧式类，只需关注新式类即可。
+
+### 17.1 新式类、旧式类区别
+
+* 旧式类（Classic Class）：
+  * 定义：在 Python 2.x 中，不显式继承自 object 的类被称为旧式类；
+  * 继承顺序：使用深度优先搜索（DFS）来解析方法继承；
+  * 方法解析顺序（MRO）：没有引入统一的 MRO；
+  
+  ```python
+  # 旧式类定义
+  class OldClass:
+      pass
+  ```
+* 新式类（New-Style Class）：
+  * 定义：在 Python 2.x 中，继承自 object 的类，以及在 Python 3.x 中的所有类，都是新式类；
+  * 继承顺序：使用广度优先搜索（BFS）和 C3 线性化算法来解析方法继承；
+  * 方法解析顺序（MRO）：引入了统一的 MRO，可以通过 __mro__ 属性查看类的解析顺序；
+    例如：可以使用 类名.\__mro__ 或 类名.mro() 方法查看类的 MRO 顺序，如，MyClass.\__mro__ 会返回类的继承顺序：
+    ```python
+    class A:
+        def show(self):
+            print("From A")
+    
+    
+    class B(A):
+        def show(self):
+            print("From B")
+    
+    
+    class C(A):
+        def show(self):
+            print("From C")
+    
+    
+    class D(B, C):
+        pass
+    
+    
+    print(D.mro()) # 输出：[<class '__main__.D'>, <class '__main__.B'>, <class '__main__.C'>, <class '__main__.A'>, <class 'object'>]
+    print(D.__mro__) # 输出：(<class '__main__.D'>, <class '__main__.B'>, <class '__main__.C'>, <class '__main__.A'>, <class 'object'>)
+    ```
+  * 元类：支持元类编程，允许通过自定义元类来控制类的创建过程；
+  
+  ```python
+  # 新式类定义（Python 2 中需继承 object）
+  class NewClass(object):
+      pass
+  # 或者 Python3
+  class NewClass:
+      pass
+  ```
+* 主要区别
+  * 继承机制：旧式类使用深度优先，而新式类使用广度优先搜索（BFS）和 C3 线性化算法；
+  * super() 函数：在新式类中，super() 可以正确地根据 MRO 调用父类方法；
+  * 属性解析：新式类支持描述符协议（如 __get__、__set__、__delete__）和更复杂的属性解析机制；
+  * 兼容性：新式类可以利用更多的 Python 特性，如装饰器和元类编程；
+* 实际应用
+  * 在 Python 3 中，所有类默认是新式类，因此通常无需显式继承 object；
+  * 在 Python 2 中，建议使用新式类来编写兼容性更强和行为一致的代码；
+
+### 17.2 Python 类继承：广度优先搜索（Python3.x/新式类）、深度优先搜索（Python2.x/旧式类）
+
+*  广度优先搜索（BFS）在类继承中的应用  
+  Python 3 中的 MRO 采用 C3 线性化算法，它基于广度优先搜索。这意味着在解析继承链时，优先访问兄弟类，再访问父类。C3 线性化确保了继承路径的顺序和一致性。
+      示例：
+      ```python
+      class A:
+          def greet(self):
+              print("Hello from A")
+        
+      class B(A):
+          def greet(self):
+              print("Hello from B")
+        
+      class C(A):
+          def greet(self):
+              print("Hello from C")
+        
+      class D(B, C):
+          pass
+        
+      d = D()
+      d.greet()  # 输出: Hello from B
+      print(D.__mro__)  # 输出: (<class '__main__.D'>, <class '__main__.B'>, <class '__main__.C'>, <class '__main__.A'>, <class 'object'>)
+      ```
+      本例中，D 类继承自 B 和 C，根据 MRO 规则，它首先检查 B，然后是 C，再是 A，最后是 object。
+
+* 深度优先搜索（DFS）在类继承中的应用  
+
+  在 Python 2 中，MRO 采用的是深度优先搜索。这意味着在解析继承链时，会先递归访问父类，而不是平级类。Python 3 采用广度优先搜索，解决了深度优先搜索可能带来的菱形继承问题。
+
+* 区别
+
+  * 搜索顺序：BFS 优先处理平级类，DFS 递归处理父类；
+  * 应用：Python 3 中采用广度优先搜索（C3 线性化），确保了继承关系的线性化和无歧义性；
+
+### 17.3 super() 使用
+
+super() 在 Python 中用于调用父类的一个方法，通常在继承链中用于访问超类的初始化方法或其他方法。正确的调用方式如下：
+
+* 单继承情况下
+  ```python
+  class Parent:
+      def __init__(self):
+          print("Parent init")
+
+  class Child(Parent):
+      def __init__(self):
+          super().__init__()  # 调用父类的 __init__ 方法
+          print("Child init")
+
+  child = Child()  # 输出：Parent init Child init
+  ```
+  
+* 多继承情况下
+    ```python
+    class A:
+        def __init__(self):
+            print("A init")
+    
+    
+    class B(A):
+        def __init__(self):
+            super().__init__()  # 调用下一个类的 __init__ 方法，遵循 MRO 顺序
+            print("B init")
+    
+    
+    class C(A):
+        def __init__(self):
+            super().__init__()
+            print("C init")
+    
+    
+    class D(B, C):
+        def __init__(self):
+            super().__init__()  # 依次调用 B, C, A 的 __init__ 方法
+            print("D init")
+    
+    
+    d = D()
+    
+    # 输出：
+    # A init
+    # C init
+    # B init
+    # D init
+    ```
+  在以上示例中，super().__init__() 调用遵循类的 MRO（Method Resolution Order），即方法解析顺序。MRO 确定了继承体系中各类的调用顺序。  
+  MRO 调用链说明：
+  * D 类的 \__init__() 方法首先调用 super().\__init__()；
+  * 由于 D 继承自 B 和 C，所以 super() 首先调用 B.\__init__()；
+  * 在 B.\__init__() 中，super().\__init__() 调用了 C.\__init__()；
+  * C.\__init__() 调用 super().\__init__() 最终调用到 A.\__init__()；
+  
+  调用顺序是：D -> B -> C -> A，打印结果依次为：
+  ```text
+    A init
+    C init
+    B init
+    D init
+  ```
