@@ -41,4 +41,11 @@
 * [17 新式类和旧式类](docs/python_features.md#17-新式类和旧式类)
 * [18 __new__和__init__区别](docs/python_features.md#18-__new__和__init__区别)
 * [19 设计模式](docs/python_features.md#19-设计模式)
+    * [19.1 单例模式](docs/python_features.md#191-单例模式)
+        * [19.1.1 使用 `__new__` 方法](docs/python_features.md#1911-使用-__new__-方法)
+        * [19.1.2 使用装饰器](docs/python_features.md#1912-使用装饰器)
+        * [19.1.3 共享属性](docs/python_features.md#1913-共享属性)
+        * [19.1.4 使用元类（MetaClass）](docs/python_features.md#1914-使用元类metaclass)
+        * [19.1.5 使用模块（import方法）](docs/python_features.md#1915-使用模块import方法)
+        * [19.1.6 线程安全单例](docs/python_features.md#1916-线程安全单例)
 
