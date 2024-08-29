@@ -3237,9 +3237,29 @@ print(singleton1 is singleton2)  # 输出: True
 
 工厂模式是一种创建型设计模式，用于定义一个接口或抽象类来创建对象，但将实例化推迟到子类中。其核心思想是通过工厂方法来处理对象的创建，而不是在代码中直接调用构造函数。这使得代码更加灵活和可扩展，尤其是在需要通过不同条件创建不同类型对象时。
 
+* 简单工厂模式（Simple Factory）
+   * 概念: 由一个工厂类根据传入的参数决定创建哪种具体产品。
+   * 优点: 简单易用，适用于产品种类较少的场景。
+   * 缺点: 工厂类高度依赖具体产品类，难以扩展。
+   * 应用场景: 创建单一产品时。
+* 工厂方法模式（Factory Method）
+   * 概念: 定义一个创建对象的接口，由子类决定实例化哪个类。
+   * 优点: 遵循开放/封闭原则，更容易扩展。
+   * 缺点: 需要为每种产品都创建一个具体工厂类，类的数量会增加。
+   * 应用场景: 当有多个产品类型，需要根据具体子类来确定产品实例时。
+* 抽象工厂模式（Abstract Factory）
+   * 概念: 提供一个接口，创建一系列相关或相互依赖的对象，而无需指定具体类。
+   * 优点: 可以创建一系列相关的产品，确保产品之间的一致性。
+   * 缺点: 复杂度较高，增加新产品族时需要扩展抽象工厂。
+   * 应用场景: 需要创建多个相关产品对象时，如跨平台开发。
+* 总结
+   * 简单工厂: 适合单一产品创建。
+   * 工厂方法: 适合多个产品类型创建，扩展性更好。
+   * 抽象工厂: 适合创建多个相关产品族，确保一致性。
+
 #### 19.2.1 简单工厂模式
 
-创建一个工厂类来生成对象实例，且通常通过传递一个参数来决定创建哪个类的对象。
+简单工厂模式通常包含一个工厂类，该类具有一个创建方法，根据传入的参数决定实例化哪个具体类。
 
 ```python
 class Animal:
@@ -3255,17 +3275,71 @@ class Cat(Animal):
         return "Meow!"
 
 class AnimalFactory:
-    def create_animal(self, animal_type):
-        if animal_type == 'dog':
+    @staticmethod
+    def create_animal(animal_type):
+        if animal_type == "dog":
             return Dog()
-        elif animal_type == 'cat':
+        elif animal_type == "cat":
             return Cat()
         else:
             return None
 
-factory = AnimalFactory()
-animal = factory.create_animal('dog')
+# 使用简单工厂创建对象
+animal = AnimalFactory.create_animal("dog")
 print(animal.speak())  # 输出: Woof!
+
+animal = AnimalFactory.create_animal("cat")
+print(animal.speak())  # 输出: Meow!
+```
+
+**说明：** AnimalFactory 类提供了一个静态方法 create_animal，根据传入的 animal_type 参数，返回相应的 Dog 或 Cat 实例。客户端只需要调用工厂方法，无需关心具体的 Dog 或 Cat 类。
+
+**优势：**  
+* 简化对象创建：客户端代码无需了解对象的创建过程，只需通过工厂类获取实例。
+* 易于扩展：可以在不修改现有客户端代码的情况下，通过扩展 AnimalFactory 类添加新的动物类型。
+* 提高代码的可维护性：降低了类之间的耦合，使代码更易于维护和理解。
+
+**实际生产用例：日志处理系统中的简单工厂模式**
+
+在实际生产中，简单工厂模式可以用于创建不同类型的日志处理器（如控制台日志、文件日志、数据库日志等），以便根据配置或运行时条件灵活地选择日志记录方式。
+
+示例代码：
+
+```python
+class Logger:
+    def log(self, message):
+        pass
+
+class ConsoleLogger(Logger):
+    def log(self, message):
+        print(f"ConsoleLogger: {message}")
+
+class FileLogger(Logger):
+    def log(self, message):
+        with open("logfile.txt", "a") as file:
+            file.write(f"FileLogger: {message}\n")
+
+class DatabaseLogger(Logger):
+    def log(self, message):
+        # 模拟数据库写入
+        print(f"DatabaseLogger: {message} (Written to database)")
+
+class LoggerFactory:
+    @staticmethod
+    def create_logger(logger_type):
+        if logger_type == "console":
+            return ConsoleLogger()
+        elif logger_type == "file":
+            return FileLogger()
+        elif logger_type == "database":
+            return DatabaseLogger()
+        else:
+            raise ValueError("Unknown logger type")
+
+# 使用简单工厂根据配置创建日志处理器
+logger_type = "file"  # 可以从配置文件或运行时动态确定
+logger = LoggerFactory.create_logger(logger_type)
+logger.log("This is a test log message.")
 ```
 
 #### 19.2.2 工厂方法模式
@@ -3312,51 +3386,157 @@ animal = factory.create_animal()
 print(animal.speak())  # 输出: Woof!
 ```
 
+**实际生产用例：数据库连接器**  
+在一个大型系统中，需要根据不同的数据库类型（如 MySQL、PostgreSQL、SQLite）创建对应的数据库连接器。工厂方法模式可以使代码灵活地支持多种数据库，而无需在主代码中硬编码数据库类型。
+
+示例代码：
+
+```python
+from abc import ABC, abstractmethod
+
+class DatabaseConnector(ABC):
+    @abstractmethod
+    def connect(self):
+        pass
+
+class MySQLConnector(DatabaseConnector):
+    def connect(self):
+        print("Connecting to MySQL")
+
+class PostgreSQLConnector(DatabaseConnector):
+    def connect(self):
+        print("Connecting to PostgreSQL")
+
+class SQLiteConnector(DatabaseConnector):
+    def connect(self):
+        print("Connecting to SQLite")
+
+class DatabaseFactory(ABC):
+    @abstractmethod
+    def create_connector(self):
+        pass
+
+class MySQLFactory(DatabaseFactory):
+    def create_connector(self):
+        return MySQLConnector()
+
+class PostgreSQLFactory(DatabaseFactory):
+    def create_connector(self):
+        return PostgreSQLConnector()
+
+class SQLiteFactory(DatabaseFactory):
+    def create_connector(self):
+        return SQLiteConnector()
+
+# 使用工厂方法模式根据配置创建数据库连接器
+config = "PostgreSQL"  # 可以从配置文件或运行时动态确定
+if config == "MySQL":
+    factory = MySQLFactory()
+elif config == "PostgreSQL":
+    factory = PostgreSQLFactory()
+elif config == "SQLite":
+    factory = SQLiteFactory()
+
+connector = factory.create_connector()
+connector.connect() # 输出：Connecting to PostgreSQL
+```
+
 * 代码解耦：工厂方法模式将对象的创建与使用分离，使得代码更为灵活，增加了系统的可扩展性。添加新的动物类型时，只需添加新的工厂类，不需要修改现有代码；
 * 符合开闭原则：代码对扩展开放，对修改封闭。新对象的创建逻辑可以通过扩展新的工厂类来实现，而不影响现有代码的稳定性；
 * 提高代码可读性：使用工厂方法模式后，创建对象的代码更简洁清晰，更容易维护；
 
 #### 19.2.3 抽象工厂模式
 
-提供一个创建一系列相关或相互依赖对象的接口，而无需指定具体类。
+提供一个创建一系列相关或相互依赖对象的接口，而无需指定具体类。通过定义一个抽象工厂类，由具体工厂实现创建相关的对象。
 
 ```python
-class Animal(ABC):
+from abc import ABC, abstractmethod
+
+# 抽象产品
+class Button(ABC):
+    # 按钮
     @abstractmethod
-    def speak(self):
+    def click(self):
         pass
 
-class Dog(Animal):
-    def speak(self):
-        return "Woof!"
-
-class Cat(Animal):
-    def speak(self):
-        return "Meow!"
-
-class AnimalFactory(ABC):
+class Checkbox(ABC):
+    # 复选框
     @abstractmethod
-    def create_animal(self):
+    def toggle(self):
         pass
 
-class DogFactory(AnimalFactory):
-    def create_animal(self):
-        return Dog()
+# 具体产品
+class WindowsButton(Button):
+    def click(self):
+        return "Windows Button Clicked"
 
-class CatFactory(AnimalFactory):
-    def create_animal(self):
-        return Cat()
+class MacOSButton(Button):
+    def click(self):
+        return "MacOS Button Clicked"
 
-class Zoo:
-    def __init__(self, animal_factory):
-        self.animal = animal_factory.create_animal()
+class WindowsCheckbox(Checkbox):
+    def toggle(self):
+        return "Windows Checkbox Toggled"
 
-    def make_noise(self):
-        return self.animal.speak()
+class MacOSCheckbox(Checkbox):
+    def toggle(self):
+        return "MacOS Checkbox Toggled"
 
-zoo = Zoo(DogFactory())
-print(zoo.make_noise())  # 输出: Woof!
+# 抽象工厂
+class GUIFactory(ABC):
+    @abstractmethod
+    def create_button(self):
+        pass
+
+    @abstractmethod
+    def create_checkbox(self):
+        pass
+
+# 具体工厂
+class WindowsFactory(GUIFactory):
+    def create_button(self):
+        return WindowsButton()
+
+    def create_checkbox(self):
+        return WindowsCheckbox()
+
+class MacOSFactory(GUIFactory):
+    def create_button(self):
+        return MacOSButton()
+
+    def create_checkbox(self):
+        return MacOSCheckbox()
+
+# 客户端代码
+def create_ui(factory: GUIFactory):
+    button = factory.create_button()
+    checkbox = factory.create_checkbox()
+    print(button.click())
+    print(checkbox.toggle())
+
+# 实际使用
+factory = WindowsFactory()
+create_ui(factory)
+# 输出：
+# Windows Button Clicked
+# Windows Checkbox Toggled
+
+factory = MacOSFactory()
+create_ui(factory)
+# 输出：
+# MacOS Button Clicked
+# MacOS Checkbox Toggled
 ```
+
+**使用场景**  
+* 跨平台应用：如上例所示，可以根据不同平台创建不同的界面组件；
+* 产品家族的创建：如果需要创建一组相关的对象，而不是单一对象，可以使用抽象工厂；
+
+**优势**  
+* 分离具体类：客户端不需要知道具体类的名称，只依赖抽象工厂接口，从而使得系统更加灵活和可扩展；
+* 一致性：确保了由一个具体工厂创建的产品之间的一致性；
+
+这种模式在需要维护多个产品家族且这些家族中的对象彼此之间有一定关联时非常有用。
 
 #### 19.2.4 单例模式与工厂模式结合
 
