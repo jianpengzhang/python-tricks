@@ -3006,7 +3006,9 @@ super() 在 Python 中用于调用父类的一个方法，通常在继承链中�
 
 ## 19. 设计模式
 
-### 19.1 单例模式
+### 19.1 单例模式（Singleton Pattern）
+
+同步可参考个人另一博文：[《Python：用于有效对象管理的单例模式》](https://mp.weixin.qq.com/s/1DkoeUAgEoU2AlhfZdvD4A)
 
 单例模式确保一个类只有一个实例，并提供一个全局访问点。它适用于需要唯一对象的场景，如：数据库连接、配置文件管理等。
 
@@ -3228,3 +3230,152 @@ print(singleton1 is singleton2)  # 输出: True
 ```
 
 **说明：** 在 Python 中，模块本身是线程安全的，导入时只会执行一次初始化，后续导入不会再次初始化。
+
+### 19.2 工厂模式（Factory Pattern）
+
+同步可参考个人另一博文：[《Python： 开始使用工厂模式设计》](https://mp.weixin.qq.com/s/iqsJTjJOWsn4nrC-L7SU3g)
+
+工厂模式是一种创建型设计模式，用于定义一个接口或抽象类来创建对象，但将实例化推迟到子类中。其核心思想是通过工厂方法来处理对象的创建，而不是在代码中直接调用构造函数。这使得代码更加灵活和可扩展，尤其是在需要通过不同条件创建不同类型对象时。
+
+#### 19.2.1 简单工厂模式
+
+创建一个工厂类来生成对象实例，且通常通过传递一个参数来决定创建哪个类的对象。
+
+```python
+class Animal:
+    def speak(self):
+        pass
+
+class Dog(Animal):
+    def speak(self):
+        return "Woof!"
+
+class Cat(Animal):
+    def speak(self):
+        return "Meow!"
+
+class AnimalFactory:
+    def create_animal(self, animal_type):
+        if animal_type == 'dog':
+            return Dog()
+        elif animal_type == 'cat':
+            return Cat()
+        else:
+            return None
+
+factory = AnimalFactory()
+animal = factory.create_animal('dog')
+print(animal.speak())  # 输出: Woof!
+```
+
+#### 19.2.2 工厂方法模式
+
+定义一个用于创建对象的接口，但让子类决定实例化哪个类，工厂方法模式使得类的实例化推迟到子类。
+
+```python
+from abc import ABC, abstractmethod
+
+class Animal(ABC):
+    # 抽象基类，定义了一个抽象方法 speak()，要求所有子类都必须实现这个方法
+    @abstractmethod
+    def speak(self):
+        pass
+
+class Dog(Animal):
+    # 继承自 Animal，并实现了 speak() 方法
+    def speak(self):
+        return "Woof!"
+
+class Cat(Animal):
+    # 继承自 Animal，并实现了 speak() 方法
+    def speak(self):
+        return "Meow!"
+
+class AnimalFactory(ABC):
+    # 抽象工厂基类
+    @abstractmethod
+    def create_animal(self):
+        pass
+
+class DogFactory(AnimalFactory):
+    # 具体工厂类
+    def create_animal(self):
+        return Dog()
+
+class CatFactory(AnimalFactory):
+    # 具体工厂类
+    def create_animal(self):
+        return Cat()
+
+factory = DogFactory()
+animal = factory.create_animal()
+print(animal.speak())  # 输出: Woof!
+```
+
+* 代码解耦：工厂方法模式将对象的创建与使用分离，使得代码更为灵活，增加了系统的可扩展性。添加新的动物类型时，只需添加新的工厂类，不需要修改现有代码；
+* 符合开闭原则：代码对扩展开放，对修改封闭。新对象的创建逻辑可以通过扩展新的工厂类来实现，而不影响现有代码的稳定性；
+* 提高代码可读性：使用工厂方法模式后，创建对象的代码更简洁清晰，更容易维护；
+
+#### 19.2.3 抽象工厂模式
+
+提供一个创建一系列相关或相互依赖对象的接口，而无需指定具体类。
+
+```python
+class Animal(ABC):
+    @abstractmethod
+    def speak(self):
+        pass
+
+class Dog(Animal):
+    def speak(self):
+        return "Woof!"
+
+class Cat(Animal):
+    def speak(self):
+        return "Meow!"
+
+class AnimalFactory(ABC):
+    @abstractmethod
+    def create_animal(self):
+        pass
+
+class DogFactory(AnimalFactory):
+    def create_animal(self):
+        return Dog()
+
+class CatFactory(AnimalFactory):
+    def create_animal(self):
+        return Cat()
+
+class Zoo:
+    def __init__(self, animal_factory):
+        self.animal = animal_factory.create_animal()
+
+    def make_noise(self):
+        return self.animal.speak()
+
+zoo = Zoo(DogFactory())
+print(zoo.make_noise())  # 输出: Woof!
+```
+
+#### 19.2.4 单例模式与工厂模式结合
+
+确保工厂类只存在一个实例：
+
+```python
+class SingletonFactory:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
+
+class DogFactory(SingletonFactory):
+    def create_animal(self):
+        return Dog()
+
+factory1 = DogFactory()
+factory2 = DogFactory()
+print(factory1 is factory2)  # 输出: True
+```
