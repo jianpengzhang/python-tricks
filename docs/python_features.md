@@ -3569,3 +3569,86 @@ factory1 = DogFactory()
 factory2 = DogFactory()
 print(factory1 is factory2)  # 输出: True
 ```
+
+### 19.3 观察者模式（Observer Pattern）
+
+观察者模式是一种行为设计模式，它定义了一种一对多的依赖关系。当一个对象的状态发生变化时，所有依赖于它的对象都会收到通知并自动更新。
+
+**组成部分：**
+
+* Subject（主题）：维护一组观察者，并提供方法来添加、删除和通知观察者；
+* Observer（观察者）：定义一个接口，用于接收主题更新的通知；
+* ConcreteSubject（具体主题）：实现主题接口，并在状态变化时通知所有观察者；
+* ConcreteObserver（具体观察者）：实现观察者接口，并在接收到通知后更新自身状态；
+
+```python
+from abc import ABC, abstractmethod
+
+class Subject:
+    # Subject 类：代表观察者模式中的“主题”或“被观察对象”。它维护一个 _observers 列表，用于存储所有已注册的观察者
+    # 在设计上,也可以考虑抽象一层,例如: 抽象主题 Subject(): 定义 __init__(), attach(), detach(), notify() ,具体主题ConcreteSubject(Subject),示例比较简单没有抽象
+    def __init__(self):
+        self._observers = []
+
+    def attach(self, observer):
+        # attach(self, observer)：将一个观察者添加到 _observers 列表中
+        self._observers.append(observer)
+
+    def detach(self, observer):
+        # detach(self, observer)：从 _observers 列表中移除指定的观察者
+        self._observers.remove(observer)
+
+    def notify(self, message):
+        # notify(self, message)：遍历 _observers 列表，调用每个观察者的 update 方法，将 message 传递给他们
+        for observer in self._observers:
+            observer.update(message)
+
+class Observer(ABC):
+    # Observer 类：定义了观察者的接口。它包含一个 update(self, message) 方法，所有具体的观察者都必须实现这个方法以处理来自主题的通知
+    @abstractmethod
+    def update(self, message):
+        pass
+
+class ConcreteObserver(Observer):
+    # ConcreteObserver 类：继承自 Observer，是一个具体的观察者实现
+    def __init__(self, name):
+        # __init__(self, name)：初始化观察者，并给它分配一个 name 属性
+        self.name = name
+
+    def update(self, message):
+        # update(self, message)：实现了 Observer 的 update 方法，当收到来自主题的通知时，打印出收到的消息
+        print(f"{self.name} received message: {message}")
+
+# 使用示例
+subject = Subject() # 创建一个主题
+
+# 创建2个观察者
+observer1 = ConcreteObserver("Observer 1")
+observer2 = ConcreteObserver("Observer 2")
+
+# 将观察者注册到对应主题
+subject.attach(observer1) 
+subject.attach(observer2)
+
+# 通知观察者，传递消息
+subject.notify("New event occurred!")
+
+# 输出：
+# Observer 1 received message: New event occurred!
+# Observer 2 received message: New event occurred!
+```
+
+>**【扩展知识点】：**  
+>
+>在 Python 中，当你定义一个抽象接口（即使用 abc.ABC 和 abc.abstractmethod 时），抽象方法通常需要定义 self 参数，特别是在实例方法中。self 是指向实例本身的引用，允许访问实例属性和方法。抽象方法和普通实例方法一样，需要传递 self 作为第一个参数。
+>
+>```python
+>from abc import ABC, abstractmethod
+>
+>class MyAbstractClass(ABC):
+>    @abstractmethod
+>    def my_method(self, param):
+>        pass
+>```
+>
+>本例中，my_method 是一个抽象方法，self 需要作为第一个参数。
