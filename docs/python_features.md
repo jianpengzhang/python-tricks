@@ -3236,22 +3236,26 @@ print(singleton1 is singleton2)  # 输出: True
 同步可参考个人另一博文：[《Python： 开始使用工厂模式设计》](https://mp.weixin.qq.com/s/iqsJTjJOWsn4nrC-L7SU3g)
 
 工厂模式是一种创建型设计模式，用于定义一个接口或抽象类来创建对象，但将实例化推迟到子类中。其核心思想是通过工厂方法来处理对象的创建，而不是在代码中直接调用构造函数。这使得代码更加灵活和可扩展，尤其是在需要通过不同条件创建不同类型对象时。
+以下是常见工厂实现方式：
 
 * 简单工厂模式（Simple Factory）
-   * 概念: 由一个工厂类根据传入的参数决定创建哪种具体产品。
-   * 优点: 简单易用，适用于产品种类较少的场景。
-   * 缺点: 工厂类高度依赖具体产品类，难以扩展。
-   * 应用场景: 创建单一产品时。
+   * 概念: 由一个工厂类根据传入的参数决定创建哪种具体产品；
+   * 优点: 客户端与产品的创建分离，客户端不需要知道产品创建的逻辑，只需要消费该产品即可;
+   * 缺点: 工厂类集成了所有产品的创建逻辑，当工厂类出现问题，所有产品都会出现问题；还有当新增加产品都会修改工厂类，违背开闭原则 ；
+   * 应用场景: 创建单一产品时；
+   
 * 工厂方法模式（Factory Method）
-   * 概念: 定义一个创建对象的接口，由子类决定实例化哪个类。
-   * 优点: 遵循开放/封闭原则，更容易扩展。
-   * 缺点: 需要为每种产品都创建一个具体工厂类，类的数量会增加。
-   * 应用场景: 当有多个产品类型，需要根据具体子类来确定产品实例时。
+   * 概念: 定义一个创建对象的接口，由子类决定实例化哪个类;
+   * 优点: 遵循开放/封闭原则，更容易扩展;
+   * 缺点: 需要为每种产品都创建一个具体工厂类，类的数量会增加;
+   * 应用场景: 当有多个产品类型，需要根据具体子类来确定产品实例时;
+   
 * 抽象工厂模式（Abstract Factory）
    * 概念: 提供一个接口，创建一系列相关或相互依赖的对象，而无需指定具体类。
    * 优点: 可以创建一系列相关的产品，确保产品之间的一致性。
    * 缺点: 复杂度较高，增加新产品族时需要扩展抽象工厂。
    * 应用场景: 需要创建多个相关产品对象时，如跨平台开发。
+   
 * 总结
    * 简单工厂: 适合单一产品创建。
    * 工厂方法: 适合多个产品类型创建，扩展性更好。
@@ -3261,43 +3265,51 @@ print(singleton1 is singleton2)  # 输出: True
 
 简单工厂模式通常包含一个工厂类，该类具有一个创建方法，根据传入的参数决定实例化哪个具体类。
 
+![python_features19.2.1.png](..%2F_static%2Fpython_features19.2.1.png)
+
 ```python
-class Animal:
-    def speak(self):
+from abc import ABC, abstractmethod
+
+class Phone(ABC):
+    @abstractmethod
+    def make(self):
         pass
 
-class Dog(Animal):
-    def speak(self):
-        return "Woof!"
+class Huawei(Phone):
+    def make(self):
+        return "Manufacture of Huawei mobile phones!"
 
-class Cat(Animal):
-    def speak(self):
-        return "Meow!"
+class Iphone(Phone):
+    def make(self):
+        return "Manufacture of iPhone mobile phones!"
 
-class AnimalFactory:
+class PhoneFactory:
     @staticmethod
-    def create_animal(animal_type):
-        if animal_type == "dog":
-            return Dog()
-        elif animal_type == "cat":
-            return Cat()
+    def create_phones(phone_type):
+        # Python 3.10+：match-case
+        # match phone_type:
+        #     case "huawei":
+        #         return Huawei()
+        #     case "iphone":
+        #         return Iphone()
+        #     case _:
+        #         print("No Phone Type.")
+        if phone_type == "huawei":
+            return Huawei()
+        elif phone_type == "iphone":
+            return Iphone()
         else:
-            return None
+            print("No Phone Type.")
 
 # 使用简单工厂创建对象
-animal = AnimalFactory.create_animal("dog")
-print(animal.speak())  # 输出: Woof!
+huawei = PhoneFactory.create_phones("huawei")
+print(huawei.make())  # 输出: Manufacture of Huawei mobile phones!
 
-animal = AnimalFactory.create_animal("cat")
-print(animal.speak())  # 输出: Meow!
+iphone = PhoneFactory.create_phones("iphone")
+print(iphone.make())  # 输出: Manufacture of iPhone mobile phones!
 ```
 
-**说明：** AnimalFactory 类提供了一个静态方法 create_animal，根据传入的 animal_type 参数，返回相应的 Dog 或 Cat 实例。客户端只需要调用工厂方法，无需关心具体的 Dog 或 Cat 类。
-
-**优势：**  
-* 简化对象创建：客户端代码无需了解对象的创建过程，只需通过工厂类获取实例。
-* 易于扩展：可以在不修改现有客户端代码的情况下，通过扩展 AnimalFactory 类添加新的动物类型。
-* 提高代码的可维护性：降低了类之间的耦合，使代码更易于维护和理解。
+**说明：** PhoneFactory 类提供了一个静态方法 create_phones，根据传入的 phone_type 参数，返回相应的 Huawei 或 Iphone 实例。客户端只需要调用工厂方法，无需关心具体的 Huawei 或 Iphone 类。
 
 **实际生产用例：日志处理系统中的简单工厂模式**
 
@@ -3344,47 +3356,46 @@ logger.log("This is a test log message.")
 
 #### 19.2.2 工厂方法模式
 
-定义一个用于创建对象的接口，但让子类决定实例化哪个类，工厂方法模式使得类的实例化推迟到子类。
+定义一个用于创建对象的工厂接口，但让子类决定实例化哪个类，工厂方法模式使得类的实例化推迟到子类。
+
+![python_features19.2.2.png](..%2F_static%2Fpython_features19.2.2.png)
 
 ```python
 from abc import ABC, abstractmethod
 
-class Animal(ABC):
-    # 抽象基类，定义了一个抽象方法 speak()，要求所有子类都必须实现这个方法
+
+class Phone(ABC):
     @abstractmethod
-    def speak(self):
+    def make(self):
         pass
 
-class Dog(Animal):
-    # 继承自 Animal，并实现了 speak() 方法
-    def speak(self):
-        return "Woof!"
+class Huawei(Phone):
+    def make(self):
+        return "Manufacture of Huawei mobile phones!"
 
-class Cat(Animal):
-    # 继承自 Animal，并实现了 speak() 方法
-    def speak(self):
-        return "Meow!"
+class Iphone(Phone):
+    def make(self):
+        return "Manufacture of iPhone mobile phones!"
 
-class AnimalFactory(ABC):
-    # 抽象工厂基类
+class PhoneFactory(ABC):
     @abstractmethod
-    def create_animal(self):
+    def create_phones(self):
         pass
 
-class DogFactory(AnimalFactory):
-    # 具体工厂类
-    def create_animal(self):
-        return Dog()
+class HuaweiFactory(PhoneFactory):
+    def create_phones(self):
+        return Huawei()
 
-class CatFactory(AnimalFactory):
-    # 具体工厂类
-    def create_animal(self):
-        return Cat()
+class IphoneFactory(PhoneFactory):
+    def create_phones(self):
+        return Iphone()
 
-factory = DogFactory()
-animal = factory.create_animal()
-print(animal.speak())  # 输出: Woof!
+factory = HuaweiFactory()
+phone = factory.create_phones()
+print(phone.make())  # 输出: Manufacture of Huawei mobile phones!
 ```
+
+说明：PhoneFactory 工厂接口，由子类决定实例化对象，如：HuaweiFactory 实例化 Huawei、IphoneFactory 实例化 Iphone。
 
 **实际生产用例：数据库连接器**  
 在一个大型系统中，需要根据不同的数据库类型（如 MySQL、PostgreSQL、SQLite）创建对应的数据库连接器。工厂方法模式可以使代码灵活地支持多种数据库，而无需在主代码中硬编码数据库类型。
@@ -3441,13 +3452,13 @@ connector = factory.create_connector()
 connector.connect() # 输出：Connecting to PostgreSQL
 ```
 
-* 代码解耦：工厂方法模式将对象的创建与使用分离，使得代码更为灵活，增加了系统的可扩展性。添加新的动物类型时，只需添加新的工厂类，不需要修改现有代码；
+* 代码解耦：工厂方法模式将对象的创建与使用分离，使得代码更为灵活，增加了系统的可扩展性。添加新的类型时，只需添加新的工厂类，不需要修改现有代码；
 * 符合开闭原则：代码对扩展开放，对修改封闭。新对象的创建逻辑可以通过扩展新的工厂类来实现，而不影响现有代码的稳定性；
 * 提高代码可读性：使用工厂方法模式后，创建对象的代码更简洁清晰，更容易维护；
 
 #### 19.2.3 抽象工厂模式
 
-提供一个创建一系列相关或相互依赖对象的接口，而无需指定具体类。通过定义一个抽象工厂类，由具体工厂实现创建相关的对象。
+提供一个创建一系列相关或相互依赖对象的接口，而无需指定具体类，由其子类工厂实现创建相关对象。
 
 ```python
 from abc import ABC, abstractmethod
@@ -3528,15 +3539,14 @@ create_ui(factory)
 # MacOS Checkbox Toggled
 ```
 
-**使用场景**  
-* 跨平台应用：如上例所示，可以根据不同平台创建不同的界面组件；
-* 产品家族的创建：如果需要创建一组相关的对象，而不是单一对象，可以使用抽象工厂；
+说明：GUIFactory 抽象工厂接口定义了创建一组相关或相互依赖对象的接口，不指定具体类，由具体子类工厂实现创建相关的对象（WindowsFactory、MacOSFactory）。
 
-**优势**  
-* 分离具体类：客户端不需要知道具体类的名称，只依赖抽象工厂接口，从而使得系统更加灵活和可扩展；
-* 一致性：确保了由一个具体工厂创建的产品之间的一致性；
+**使用场景**
 
-这种模式在需要维护多个产品家族且这些家族中的对象彼此之间有一定关联时非常有用。
+* 跨平台应用：如，可以根据不同平台创建不同的界面组件、封装不同共有云 API 接口（华为、阿里等）；
+* 产品族的创建：如果需要创建一组相关的对象，而不是单一对象，可以使用抽象工厂；
+
+工厂方法专注于创建单个产品，抽象工厂则是用于创建一系列相关产品。两者都遵循依赖倒置原则和开放/封闭原则，但抽象工厂模式更为复杂，适用于需要生成一组关联对象的场景。
 
 #### 19.2.4 单例模式与工厂模式结合
 
