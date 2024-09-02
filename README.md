@@ -54,4 +54,5 @@
         * [19.2.3 抽象工厂模式](docs/python_features.md#1923-抽象工厂模式)
         * [19.2.4 单例模式与工厂模式结合](docs/python_features.md#1924-单例模式与工厂模式结合)
     * [19.3 观察者模式（Observer Pattern）](docs/python_features.md#193-观察者模式observer-pattern)
+    * [19.4 责任链模式（Chain of Responsibility Pattern）](docs/python_features.md#194-责任链模式chain-of-responsibility-pattern) 
 

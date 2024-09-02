@@ -3652,3 +3652,359 @@ subject.notify("New event occurred!")
 >```
 >
 >本例中，my_method 是一个抽象方法，self 需要作为第一个参数。
+ 
+### 19.4 责任链模式（Chain of Responsibility Pattern）
+
+#### 19.4.1 介绍
+
+责任链模式（Chain of Responsibility Pattern）是一种行为型设计模式，它允许多个对象有机会处理请求，避免了请求发送者与接收者之间的紧耦合；通过将多个处理对象串联成一条链，请求会沿着这条链传递，直到有对象处理它或者到达链末尾。可以将责任链模式理解为一个“接力赛跑”，每个对象都有机会处理请求，如果不能处理，就将请求传递给下一个对象。
+
+**模式结构：**  
+责任链模式主要包含以下角色：  
+* Handler（抽象处理者）：抽象基类，定义处理请求的方法，通常提供将请求传递给下一个处理者的接口；
+* ConcreteHandler（具体处理者）：继承 Handler，实现抽象处理者的处理逻辑，如果不能处理，则将请求传递给下一个处理者；
+* Client（客户端）：创建具体处理者对象并设置它们的职责链；
+
+**原理：**  
+责任链模式的核心在于链式调用，每个处理者持有对下一个处理者的引用，当一个处理者无法处理请求时，将请求转发给下一个处理者。这种方式使得请求的发送者无需知道请求将由哪个对象处理，增加了系统的灵活性和可扩展性。
+
+**优势：**  
+* 降低耦合：请求的发送者与处理者之间不需要显式地知道对方，增加了系统的灵活性；
+* 增强灵活性：可以动态地添加或移除处理者，轻松改变处理顺序；
+* 遵循单一职责原则：每个处理者只关注自身的处理逻辑，职责清晰；
+
+**缺点：**  
+* 可能无法保证请求被处理：如果链中没有处理者能够处理请求，可能导致请求未被处理；
+* 调试困难：链中的处理者可能较多，跟踪请求的处理路径可能较为复杂；
+* 性能问题：如果责任链过长，可能导致处理请求的时间增加；
+
+**常见应用场景：**  
+* 订单审批流程：在企业中，订单的审批通常需要经过多个层级，例如经理、主管、总监等，根据订单金额的不同，订单需要不同层级的审批，责任链模式可以动态地构建审批流程；
+* 表单验证：在用户提交表单时，可能需要进行多个验证步骤，如字段格式验证、逻辑验证、权限验证等。每个验证步骤可以作为责任链中的一个处理者，逐步验证输入数据的合法性；
+* 日志处理系统：日志系统可能需要根据日志级别（如 DEBUG、INFO、WARN、ERROR）将日志信息发送到不同的输出目标（如控制台、文件、远程服务器）。责任链模式可以动态地配置不同级别日志的处理逻辑；
+* 数据处理流水线：在数据处理过程中，可能需要经过多个处理步骤，如数据清洗、转换、验证、存储等。每个处理步骤可以作为责任链中的一个处理者，依次处理数据；
+
+
+
+#### 19.4.2 代码示例
+
+* 示例1：订单审批流程  
+  **需求描述：**
+  订单金额不同，需要不同级别的审批人员进行审批：
+  * 金额 < 1000：由经理审批
+  * 1000 ≤ 金额 < 5000：由主管审批
+  * 金额 ≥ 5000：由总监审批
+  
+  ```python
+  from __future__ import annotations
+  
+  from abc import ABC, abstractmethod
+  from dataclasses import dataclass
+  from typing import Optional, Any
+  
+  
+  # 责任链模式模式
+  @dataclass
+  class Order:
+      amount: float  # 金额
+      description: str  # 描述
+  
+  
+  class Handler(ABC):
+      # 处理程序接口
+      @abstractmethod
+      def set_next(self, handler: Handler) -> Handler:
+          # 声明一个用于构建处理程序链的方法
+          pass
+  
+      @abstractmethod
+      def handle(self, data) -> Optional[str]:
+          # 声明一个用于执行处理方法
+          pass
+  
+  
+  class AbstractHandler(Handler):
+      # 基础类，定义默认处理程序行为
+      _next_handler: Handler = None
+  
+      def set_next(self, handler: Handler) -> Handler:
+          self._next_handler = handler
+          return handler
+  
+      @abstractmethod
+      def handle(self, data: Any) -> str:
+          if self._next_handler:
+              return self._next_handler.handle(data)
+          return ""
+  
+  
+  # 具体处理者：经理
+  class ManagerHandler(AbstractHandler):
+      def handle(self, data: Order) -> str:
+          if data.amount < 1000:
+              return f"Manager approved order: {data.description} for ${data.amount}"
+          else:
+              return super().handle(data)
+  
+  
+  # 具体处理者：主管
+  class SupervisorHandler(AbstractHandler):
+      def handle(self, data: Order) -> str:
+          if 1000 <= data.amount < 5000:
+              return f"Supervisor approved order: {data.description} for ${data.amount}"
+          else:
+              return super().handle(data)
+  
+  
+  # 具体处理者：总监
+  class DirectorHandler(AbstractHandler):
+      def handle(self, data: Order) -> str:
+          if data.amount >= 5000:
+              return f"Director approved order: {data.description} for ${data.amount}"
+          else:
+              return super().handle(data)
+  
+  
+  if __name__ == '__main__':
+      # 创建订单
+      orders = [
+          Order(500, "Office Supplies"),
+          Order(2000, "New Computers"),
+          Order(7000, "Office Renovation")
+      ]
+  
+      # 处理订单
+      manager = ManagerHandler()
+      supervisor = SupervisorHandler()
+      director = DirectorHandler()
+      manager.set_next(supervisor).set_next(director)
+      for order in orders:
+          print(manager.handle(order))
+  
+  # 输出：
+  # Manager approved order: Office Supplies for $500
+  # Supervisor approved order: New Computers for $2000
+  # Director approved order: Office Renovation for $7000
+  ```
+
+  **代码解释：**  
+  * Order 类：使用 @dataclass 装饰器定义订单对象，包含 amount 和 description 两个属性；
+  * AbstractHandler 基础类：实现了默认责任链模式行为，包含：默认处理行为及 _next_handler 对下一个处理者（审批者）的引用；
+  * 具体处理者（ManagerHandler, SupervisorHandler, DirectorHandler）：实现 handle 方法，根据订单金额决定是否处理或转发给下一个处理者；
+  * 客户端代码：
+    * 构建责任链：manager -> supervisor -> director；
+    * 创建多个订单并通过责任链进行审批；
+  
+* 示例2：表单验证  
+  **需求描述：**  
+  用户提交表单时，需要经过多个验证步骤：    
+  * 非空验证；  
+  * 格式验证（如邮箱格式）；  
+  * 逻辑验证（如密码匹配）；  
+  ```python
+  from abc import ABC, abstractmethod
+  
+  # 请求对象
+  @dataclass
+  class FormData:
+      username: str
+      email: str
+      password: str
+      confirm_password: str
+  
+  # 抽象处理者
+  class Validator(ABC):
+      def __init__(self, successor=None):
+          self._successor = successor
+  
+      @abstractmethod
+      def validate(self, data: FormData):
+          pass
+  
+  # 具体处理者：非空验证
+  class NotEmptyValidator(Validator):
+      def validate(self, data: FormData):
+          if not all([data.username, data.email, data.password, data.confirm_password]):
+              raise ValueError("All fields must be filled out.")
+          if self._successor:
+              self._successor.validate(data)
+  
+  # 具体处理者：格式验证
+  import re
+  
+  class EmailFormatValidator(Validator):
+      def validate(self, data: FormData):
+          email_regex = r"[^@]+@[^@]+\.[^@]+"
+          if not re.match(email_regex, data.email):
+              raise ValueError("Invalid email format.")
+          if self._successor:
+              self._successor.validate(data)
+  
+  # 具体处理者：逻辑验证
+  class PasswordMatchValidator(Validator):
+      def validate(self, data: FormData):
+          if data.password != data.confirm_password:
+              raise ValueError("Passwords do not match.")
+          if self._successor:
+              self._successor.validate(data)
+  
+  # 客户端代码
+  if __name__ == "__main__":
+      # 构建验证链
+      # password_validator = PasswordMatchValidator()
+      # email_validator = EmailFormatValidator(password_validator)
+      # not_empty_validator = NotEmptyValidator(email_validator)
+      not_empty_validator = NotEmptyValidator(EmailFormatValidator(PasswordMatchValidator()))
+      # 创建表单数据
+      form_data = [
+          FormData("john_doe", "john@example.com", "password123", "password123"),
+          FormData("", "jane@example.com", "password123", "password123"),
+          FormData("jane_doe", "janeexample.com", "password123", "password123"),
+          FormData("jane_doe", "jane@example.com", "password123", "password321")
+      ]
+  
+      # 验证表单数据
+      for data in form_data:
+          try:
+              not_empty_validator.validate(data)
+              print(f"Form data for {data.username} is valid.")
+          except ValueError as e:
+              print(f"Validation error for {data.username}: {e}")
+  # 输出：
+  # Form data for john_doe is valid.
+  # Validation error for : All fields must be filled out.
+  # Validation error for jane_doe: Invalid email format.
+  # Validation error for jane_doe: Passwords do not match.
+  ```
+
+  **代码解释：**    
+  * FormData 类：定义表单数据结构，包含 username, email, password, confirm_password 四个字段；
+  * Validator 抽象类：定义了验证器的接口，包含 validate 方法和对下一个验证器的引用 _successor；
+  * 具体验证器（NotEmptyValidator, EmailFormatValidator, PasswordMatchValidator）：
+    * NotEmptyValidator：检查所有字段是否非空；
+    * EmailFormatValidator：检查邮箱格式是否正确；
+    * PasswordMatchValidator：检查密码和确认密码是否匹配；
+  * 客户端代码：
+    * 构建验证链：NotEmptyValidator -> EmailFormatValidator -> PasswordMatchValidator；
+    * 创建多个表单数据并进行验证；
+
+* 示例3：基于责任链模式的数据格式校验示例代码，假设我们需要校验数据中的多个字段，如字符串的长度、数值的范围等；
+
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class Data:
+    # Data 数据类：封装了待校验的数据属性，如字符串、分数和日期
+    string_value: str
+    score: int
+    date: str
+
+
+class _CheckInterface(ABC):
+    # _CheckInterface 接口：定义了责任链的基础接口，包括设置下一个检查器(set_next)和执行检查(check)。
+    @abstractmethod
+    def set_next(self, checker: '_CheckInterface') -> '_CheckInterface':
+        pass
+
+    @abstractmethod
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        pass
+
+
+class DataChecker(_CheckInterface):
+    # DataChecker 抽象类：实现了责任链的基本逻辑，
+    # 通过 set_next 方法构建链条，
+    # check 方法逐级调用链条上的检查器，
+    # raise_error 方法则抛出校验失败的异常
+    _next_checker: Optional[_CheckInterface] = None
+
+    def set_next(self, checker: _CheckInterface) -> _CheckInterface:
+        self._next_checker = checker
+        return checker
+
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        if self._next_checker:
+            return self._next_checker.check(data, **kwargs)
+        return None
+
+    def raise_error(self, message: str):
+        raise ValueError(f'校验失败: {message}')
+
+    @classmethod
+    def check_list(cls) -> 'DataChecker':
+
+        # return CheckStringLength().set_next(CheckScoreRange()).set_next(CheckDateFormat())
+        # 或者
+        _checker = CheckStringLength()
+        tmp = _checker
+        for clazz in [CheckScoreRange, CheckDateFormat]:
+            tmp = tmp.set_next(clazz())
+        return _checker
+
+
+class CheckStringLength(DataChecker):
+    # 具体的检查器：校验字符串长度
+    MIN = 5
+    MAX = 20
+
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        if not (self.MIN <= len(data.string_value) <= self.MAX):
+            self.raise_error(f'字符串长度需要在 {self.MIN}-{self.MAX} 之间')
+        return super().check(data, **kwargs)
+
+
+class CheckScoreRange(DataChecker):
+    # 具体的检查器：分数范围
+    MIN = 0
+    MAX = 100
+
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        if not (self.MIN <= data.score <= self.MAX):
+            self.raise_error(f'分值需要在 {self.MIN}-{self.MAX} 之间')
+        return super().check(data, **kwargs)
+
+
+class CheckDateFormat(DataChecker):
+    # 具体的检查器：日期格式
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        try:
+            year, month, day = map(int, data.date.split('-'))
+            if len(data.date) != 10:
+                raise ValueError
+        except ValueError:
+            self.raise_error('日期格式不正确，应为 YYYY-MM-DD')
+        return super().check(data, **kwargs)
+
+
+# 示例数据
+data = Data(string_value='HelloWorld', score=85, date='2024-08-30')
+
+try:
+    checker = DataChecker.check_list()
+    checker.check(data)
+    print("数据校验通过")
+except ValueError as e:
+    print(str(e))
+```
+
+**扩展与重用：**    
+
+扩展其他校验时，可以通过继承 DataChecker 类并实现 check 方法来定义新的检查器。例如，如果需要增加电子邮件格式校验，只需创建一个新的检查类并加入到责任链中：
+
+```python
+class CheckEmailFormat(DataChecker):
+    def check(self, data: Data, **kwargs) -> Optional[str]:
+        if '@' not in data.string_value:
+            self.raise_error('无效的电子邮件格式')
+        return super().check(data, **kwargs)
+
+# 在责任链中增加新的检查器
+def check_list_with_email() -> DataChecker:
+    return CheckStringLength().set_next(CheckEmailFormat()).set_next(CheckScoreRange()).set_next(CheckDateFormat())
+```
+
+通过责任链模式，新的校验逻辑可以轻松集成到现有系统中，且不影响已有的校验器，实现了代码的高度复用和扩展性。
