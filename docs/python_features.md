@@ -3703,15 +3703,13 @@ subject.notify("New event occurred!")
   from typing import Optional, Any
   
   
-  # 责任链模式模式
   @dataclass
   class Order:
       amount: float  # 金额
       description: str  # 描述
   
-  
+  # 处理程序接口
   class Handler(ABC):
-      # 处理程序接口
       @abstractmethod
       def set_next(self, handler: Handler) -> Handler:
           # 声明一个用于构建处理程序链的方法
@@ -3722,9 +3720,8 @@ subject.notify("New event occurred!")
           # 声明一个用于执行处理方法
           pass
   
-  
+  # 基础类，定义默认处理程序行为
   class AbstractHandler(Handler):
-      # 基础类，定义默认处理程序行为
       _next_handler: Handler = None
   
       def set_next(self, handler: Handler) -> Handler:
