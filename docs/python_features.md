@@ -4107,6 +4107,143 @@ if __name__ == "__main__":
 * 支付方式选择：根据用户选择的支付方式（如信用卡、PayPal），应用不同的支付策略；
 * 路径规划：地图应用中可以根据不同的策略（最短路径、避开高速、避开收费）进行路径规划；
 
+### 19.6 命令模式（Command Pattern）
+
+命令模式（Command Pattern）是一种行为设计模式，它可将请求转换为一个包含与请求相关的所有信息的独立对象。该转换让你能根据不同的请求将方法参数化、延迟请求执行或将其放入队列中，且能实现可撤销操作。
+
+**命令模式结构：**  
+
+* 命令对象（Command）：封装了一个具体的操作和它的参数；
+* 调用者（Invoker）：持有命令对象并在某个时间点调用命令；
+* 接收者（Receiver）：实际执行命令操作的对象；
+
+![python_features19.6.1.png](..%2F_static%2Fpython_features19.6.1.png)
+
+**示例：**  
+
+```python
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+
+
+class Command(ABC):
+    """
+    Command 接口声明了一个执行命令的方法
+    """
+
+    @abstractmethod
+    def execute(self) -> None:
+        pass
+
+
+class SimpleCommand(Command):
+    """
+    具体命令类：实现了简单打印任务
+    """
+
+    def __init__(self, payload: str) -> None:
+        self._payload = payload
+
+    def execute(self) -> None:
+        print(f"SimpleCommand: See, I can do simple things like printing"
+              f"({self._payload})")
+
+
+class ComplexCommand(Command):
+    """
+    具体命令类：处理更复杂的操作，接受 Receiver 对象和一些参数，在 execute 中将任务委托给接收者。
+    """
+
+    def __init__(self, receiver: Receiver, a: str, b: str) -> None:
+        """
+        复杂命令可以通过构造函数接受一个或多个接收对象（receivers）以及任何上下文数据
+        """
+        self._receiver = receiver
+        self._a = a
+        self._b = b
+
+    def execute(self) -> None:
+        """
+        命令执行委托给接收者（receivers）方法
+        """
+        print("ComplexCommand: Complex stuff should be done by a receiver object", end="")
+        self._receiver.do_something(self._a)
+        self._receiver.do_something_else(self._b)
+
+
+class Receiver:
+    """
+    包含了执行实际任务的业务逻辑
+    """
+
+    def do_something(self, a: str) -> None:
+        print(f"\nReceiver: Working on ({a}.)", end="")
+
+    def do_something_else(self, b: str) -> None:
+        print(f"\nReceiver: Also working on ({b}.)", end="")
+
+
+class Invoker:
+    """
+    保存命令对象并在合适的时机调用它们。它通过 set_on_start 和 set_on_finish 方法设置在任务开始前和结束后的命令
+    """
+    _on_start = None
+    _on_finish = None
+
+    def set_on_start(self, command: Command):
+        self._on_start = command
+
+    def set_on_finish(self, command: Command):
+        self._on_finish = command
+
+    def do_something_important(self) -> None:
+        """
+        Invoker 不依赖于具体的命令或接收器类。Invoker 通过执行命令间接将请求传递给接收器
+        """
+        print("Invoker: Does anybody want something done before I begin?")
+        if isinstance(self._on_start, Command):
+            self._on_start.execute()
+
+        print("Invoker: ...doing something really important...")
+
+        print("Invoker: Does anybody want something done after I finish?")
+        if isinstance(self._on_finish, Command):
+            self._on_finish.execute()
+
+
+if __name__ == "__main__":
+    """
+    通过设置不同的命令和接收者，展示了命令模式的灵活性
+    """
+
+    invoker = Invoker()
+    invoker.set_on_start(SimpleCommand("Say Hi!"))
+    receiver = Receiver()
+    invoker.set_on_finish(ComplexCommand(
+        receiver, "Send email", "Save report"))
+
+    invoker.do_something_important()
+
+# 输出：
+# Invoker: Does anybody want something done before I begin?
+# SimpleCommand: See, I can do simple things like printing(Say Hi!)
+# Invoker: ...doing something really important...
+# Invoker: Does anybody want something done after I finish?
+# ComplexCommand: Complex stuff should be done by a receiver object
+# Receiver: Working on (Send email.)
+# Receiver: Also working on (Save report.)
+```
+
+**扩展性：**  
+* 新的命令可以通过继承 Command 类轻松扩展，无需修改现有代码；
+* Invoker 类可以调用任意命令对象，使得命令链和任务序列化非常灵活；
+
+**使用场景：**    
+* 任务撤销、重做功能；
+* 事务脚本的执行（如数据库操作）；
+* 宏命令（多个命令的组合）；
+
 ### 19.x 更多设计模式
 
-本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式）：https://refactoringguru.cn/design-patterns/python
+本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python
