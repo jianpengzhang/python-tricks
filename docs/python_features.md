@@ -4299,6 +4299,106 @@ if __name__ == "__main__":
 # Adapter: (TRANSLATED) OldSystem's specific request
 ```
 
+### 19.8 模板方法模式（Template Method Pattern）
+
+模板方法模式（Template Method Pattern）是一种行为设计模式，它定义了一个算法的骨架，并允许子类在不改变算法结构的情况下重定义算法的某些步骤。此模式将代码的复用性和灵活性很好地结合在一起。
+
+**示例场景：**  
+假设你要实现一组操作步骤，每个步骤的细节可能会有所不同，但总体的操作流程是相同的。模板方法模式可以将这些步骤的框架定义在一个基类中，而具体的实现则交由子类完成。
+
+  * 当多个类有相似的逻辑结构时，可以使用模板方法模式将相同的逻辑部分提取到基类中，而不同的细节部分则由子类实现；
+  * 避免代码重复，提升代码的可维护性和扩展性；
+
+**示例代码：**  
+```python
+from abc import ABC, abstractmethod
+
+class DataProcessor(ABC):
+    """
+    抽象类，定义了处理数据 process 方法，其中包含读取、处理和保存数据的步骤，具体由子类实现，但模板方法 process 本身应保持不变，定义操作调用组成及顺序。
+    """
+
+    def process(self):
+        # 模板方法 process：在基类中定义，不可更改，但可以通过继承来实现具体的细节
+        self.to_start()
+        self.read_data()
+        self.process_data()
+        self.save_data()
+        self.to_finish()
+
+    def to_start(self) -> None:
+        print("Start processing data")
+
+    def to_finish(self) -> None:
+        print("End of data processing")
+
+    @abstractmethod
+    def read_data(self) -> None:
+        pass
+
+    @abstractmethod
+    def process_data(self) -> None:
+        pass
+
+    @abstractmethod
+    def save_data(self) -> None:
+        pass
+
+
+class CSVProcessor(DataProcessor):
+    """
+    具体子类: CSV 数据的读取、处理和保存步骤
+    """
+
+    def read_data(self):
+        print("Reading CSV data")
+
+    def process_data(self):
+        print("Processing CSV data")
+
+    def save_data(self):
+        print("Saving CSV data")
+
+
+class JSONProcessor(DataProcessor):
+    """
+    具体子类: JSON 数据的读取、处理和保存步骤
+    """
+
+    def read_data(self):
+        print("Reading JSON data")
+
+    def process_data(self):
+        print("Processing JSON data")
+
+    def save_data(self):
+        print("Saving JSON data")
+
+
+def client_code(data_processor: DataProcessor) -> None:
+    data_processor.process()
+
+
+if __name__ == "__main__":
+    client_code(CSVProcessor())
+    print("\n")
+    client_code(JSONProcessor())
+
+# 输出：
+# Start processing data
+# Reading CSV data
+# Processing CSV data
+# Saving CSV data
+# End of data processing
+#
+#
+# Start processing data
+# Reading JSON data
+# Processing JSON data
+# Saving JSON data
+# End of data processing
+```
+
 ### 19.x 更多设计模式
 
 本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python

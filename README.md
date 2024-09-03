@@ -58,4 +58,5 @@
     * [19.5 策略模式（Strategy Pattern）](docs/python_features.md#195-策略模式strategy-pattern)
     * [19.6 命令模式（Command Pattern）](docs/python_features.md#196-命令模式command-pattern)
     * [19.7 适配器模式（Adapter Pattern）](docs/python_features.md#197-适配器模式adapter-pattern)
+    * [19.8 模板方法模式（Template Method Pattern）](docs/python_features.md#198-模板方法模式template-method-pattern)
 
