@@ -4399,6 +4399,141 @@ if __name__ == "__main__":
 # End of data processing
 ```
 
+### 19.9 组合模式（Composite Pattern）
+
+组合模式（Composite Pattern）是一种结构型设计模式，它允许你将对象组合成树形结构来表示“部分-整体”的层次结构。组合模式使得用户对单个对象和组合对象的使用具有一致性。
+
+**示例场景：** 假设你在开发一个文件系统，其中有文件和文件夹。文件夹可以包含文件或其他文件夹。你希望用户能够对文件和文件夹进行统一的操作，如获取大小、添加或删除内容等。
+
+**示例代码：**  
+
+```python
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import List
+
+
+# 组件接口
+class Component(ABC):
+    """
+    声明了组合中简单对象和复杂对象的通用操作
+    """
+
+    # 可选（parent）：基础组件可以声明一个接口，用于设置和访问树结构中的父级，并提供一些默认实现
+    @property
+    def parent(self) -> Component:
+        return self._parent
+
+    @parent.setter
+    def parent(self, component: Component):
+        self._parent = component
+
+    def add(self, component: Component) -> None:
+        pass
+
+    def remove(self, component: Component) -> None:
+        pass
+
+    def is_composite(self) -> bool:
+        return False
+
+    @abstractmethod
+    def operation(self) -> str:
+        # 是所有组件必须实现的方法，定义了组件的具体操作行为
+        pass
+
+
+# 叶子节点
+class Leaf(Component):
+    """
+    Leaf 类表示组合的最终对象（树结构中的叶子节点），叶子节点不能包含其他组件。
+    通常，Leaf 对象会执行实际工作，而 Composite 对象只会委托给其子组件。
+    """
+
+    def operation(self) -> str:
+        # 具体实现 operation() 方法，表示叶子节点的操作
+        return "Leaf"
+
+
+# 组合节点
+class Composite(Component):
+    """
+    组合节点可以包含其他 Component 对象（既可以是叶子节点，也可以是其他组合节点）
+    """
+    def __init__(self) -> None:
+        self._children: List[Component] = []
+
+    # 实现了 add() 和 remove() 方法，用于管理子节点
+    def add(self, component: Component) -> None:
+        self._children.append(component)
+        component.parent = self
+
+    def remove(self, component: Component) -> None:
+        self._children.remove(component)
+        component.parent = None
+
+    def is_composite(self) -> bool:
+        return True
+
+    def operation(self) -> str:
+        # operation() 方法递归调用子节点的 operation() 方法，并返回组合的结果
+        results = []
+        for child in self._children:
+            results.append(child.operation())
+        return f"Branch({'+'.join(results)})"
+
+
+def client_code(component: Component) -> None:
+    # 演示如何在不知道组件类型的情况下执行操作。这展示了组合模式的强大之处，可以对叶子节点和组合节点进行统一处理
+    print(f"RESULT: {component.operation()}", end="")
+
+
+def client_code2(component1: Component, component2: Component) -> None:
+    # 进一步展示了组合模式的灵活性，允许在运行时动态地将子组件添加到组合组件中
+    if component1.is_composite():
+        component1.add(component2)
+
+    print(f"RESULT: {component1.operation()}", end="")
+
+
+if __name__ == "__main__":
+    # 单个叶子节点: 打印 Leaf，表示这是一个单独的叶子节点
+    simple = Leaf()
+    print("Client: I've got a simple component:")
+    client_code(simple)
+    print("\n")
+    # 组合树结构: 打印 Branch(Branch(Leaf + Leaf) + Branch(Leaf))，表示一个组合结构，包含多个叶子节点
+    tree = Composite()
+
+    branch1 = Composite()
+    branch1.add(Leaf())
+    branch1.add(Leaf())
+
+    branch2 = Composite()
+    branch2.add(Leaf())
+
+    tree.add(branch1)
+    tree.add(branch2)
+
+    print("Client: Now I've got a composite tree:")
+    client_code(tree)
+    print("\n")
+    # 动态添加叶子节点: 打印 Branch(Branch(Leaf + Leaf) + Branch(Leaf) + Leaf)，展示如何在树结构中动态添加节点，并统一处理
+    print("Client: I don't need to check the components classes even when managing the tree:")
+    client_code2(tree, simple)
+
+# 输出：
+# Client: I've got a simple component:
+# RESULT: Leaf
+#
+# Client: Now I've got a composite tree:
+# RESULT: Branch(Branch(Leaf+Leaf)+Branch(Leaf))
+#
+# Client: I don't need to check the components classes even when managing the tree:
+# RESULT: Branch(Branch(Leaf+Leaf)+Branch(Leaf)+Leaf)
+```
+
 ### 19.x 更多设计模式
 
 本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python
