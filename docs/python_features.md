@@ -4008,5 +4008,105 @@ def check_list_with_email() -> DataChecker:
 
 ### 19.5 策略模式（Strategy Pattern）
 
-策略模式（Strategy Pattern）是一种行为设计模式，它定义了一系列算法，并将每个算法封装到独立的类中，使得它们可以互相替换，在 Python 代码中很常见。 它经常在各种框架中使用， 能在不扩展类的情况下向用户提供改变其行为的方式。
+策略模式（Strategy Pattern）是一种行为设计模式，它定义了一系列算法，并将每个算法封装到独立的类中，使得它们可以互相替换，在 Python 代码中很常见，经常在各种框架中使用，能在不扩展类的情况下向用户提供改变其行为的方式。
 
+**关键点：**  
+
+* Context：使用策略对象的类，维护指向具体策略的引用，且仅通过策略接口与该对象进行交流；
+* Strategy：策略接口或抽象类，定义了算法的共同行为；
+* Concrete Strategy：具体策略类，实现了不同的算法；
+
+![python_features19.5.1.png](..%2F_static%2Fpython_features19.5.1.png)
+
+**示例：对 Lits 数据提供降序/升序排列算法**
+```python
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import List
+
+
+class Strategy(ABC):
+    """
+    策略接口声明了某个算法各个不同版本间所共有的操作。Context 会使用该接口来调用有具体策略定义的算法
+    """
+
+    @abstractmethod
+    def do_algorithm(self, data: List):
+        pass
+
+
+class Context:
+    """
+    持有一个 Strategy 对象的引用。Context 类通过 strategy 属性调用策略的算法
+    """
+
+    def __init__(self, strategy: Strategy) -> None:
+        self._strategy = strategy
+
+    @property
+    def strategy(self) -> Strategy:
+        return self._strategy
+
+    @strategy.setter
+    def strategy(self, strategy: Strategy) -> None:
+        self._strategy = strategy
+
+    def do_some_business_logic(self, data: List) -> None:
+        # 展示如何使用策略对象来执行算法逻辑。在此例中，它使用策略对数据进行排序
+        print("Context: Sorting data using the strategy (not sure how it'll do it)")
+        result = self._strategy.do_algorithm(data)
+        print(",".join(result))
+
+
+class ConcreteStrategyA(Strategy):
+    """
+     实现按升序排序的算法
+    """
+
+    def do_algorithm(self, data: List) -> List:
+        return sorted(data)
+
+
+class ConcreteStrategyB(Strategy):
+    """
+     实现按降序排序的算法
+    """
+
+    def do_algorithm(self, data: List) -> List:
+        return reversed(sorted(data))
+
+
+if __name__ == "__main__":
+    data = ['a', 'b', 'c', 'd', 'e', 'f']
+    context = Context(ConcreteStrategyA())
+    print("Client: Strategy is set to normal sorting.")
+    context.do_some_business_logic(data)
+    print()
+    # 通过改变 Context 的 strategy，可以动态地切换使用不同的算法
+    print("Client: Strategy is set to reverse sorting.")
+    context.strategy = ConcreteStrategyB()
+    context.do_some_business_logic(data)
+
+# 输出：
+# Client: Strategy is set to normal sorting.
+# Context: Sorting data using the strategy (not sure how it'll do it)
+# a,b,c,d,e,f
+# 
+# Client: Strategy is set to reverse sorting.
+# Context: Sorting data using the strategy (not sure how it'll do it)
+# f,e,d,c,b,a
+```
+
+**优点：**  
+* 灵活性：可以在运行时动态改变策略；
+* 可扩展性：增加新策略不影响现有系统；
+
+**应用场景：**  
+策略模式适合场景：当系统有多种算法或行为，并且希望在运行时灵活选择其中一种时。  
+* 支付方式选择：根据用户选择的支付方式（如信用卡、PayPal），应用不同的支付策略；
+* 路径规划：地图应用中可以根据不同的策略（最短路径、避开高速、避开收费）进行路径规划；
+
+### 19.x 更多设计模式
+
+本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式）：https://refactoringguru.cn/design-patterns/python
