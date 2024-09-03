@@ -3652,7 +3652,7 @@ subject.notify("New event occurred!")
 >```
 >
 >本例中，my_method 是一个抽象方法，self 需要作为第一个参数。
- 
+
 ### 19.4 责任链模式（Chain of Responsibility Pattern）
 
 #### 19.4.1 介绍
@@ -3683,8 +3683,6 @@ subject.notify("New event occurred!")
 * 表单验证：在用户提交表单时，可能需要进行多个验证步骤，如字段格式验证、逻辑验证、权限验证等。每个验证步骤可以作为责任链中的一个处理者，逐步验证输入数据的合法性；
 * 日志处理系统：日志系统可能需要根据日志级别（如 DEBUG、INFO、WARN、ERROR）将日志信息发送到不同的输出目标（如控制台、文件、远程服务器）。责任链模式可以动态地配置不同级别日志的处理逻辑；
 * 数据处理流水线：在数据处理过程中，可能需要经过多个处理步骤，如数据清洗、转换、验证、存储等。每个处理步骤可以作为责任链中的一个处理者，依次处理数据；
-
-
 
 #### 19.4.2 代码示例
 
@@ -4243,6 +4241,63 @@ if __name__ == "__main__":
 * 任务撤销、重做功能；
 * 事务脚本的执行（如数据库操作）；
 * 宏命令（多个命令的组合）；
+
+### 19.7 适配器模式（Adapter Pattern）
+
+适配器模式（Adapter Pattern）是一种结构型设计模式，它允许将一个类的接口转换为客户希望的另一个接口，使得原本不兼容的类可以协同工作。 适配器模式在 Python 代码中很常见。 基于一些遗留代码的系统常常会使用该模式。 在这种情况下， 适配器让遗留代码与当前类得以相互合作。
+
+**示例：** 假设你有一个旧的类 Adaptee，它的接口不符合新的系统 Target 所要求的接口。通过使用适配器模式，可以在不改变旧系统代码的情况下使其兼容新系统。
+
+```python
+class Adaptee:
+    """
+    表示旧系统，有自己的接口 specific_request
+    """
+
+    def specific_request(self) -> str:
+        return "OldSystem's specific request"
+
+
+class Target:
+    """
+    新系统所期望的接口
+    """
+
+    def request(self) -> str:
+        return "NewSystem's request"
+
+
+class Adapter(Target, Adaptee):
+    """
+    适配器类（Adapter），通过多重继承使得 Adaptee（旧系统） 的接口和 Target（新系统） 的接口兼容
+    """
+
+    def request(self) -> str:
+        return f"Adapter: (TRANSLATED) {self.specific_request()}"
+
+
+# 新系统中使用统一的接口
+def client_code(target: Target) -> None:
+    """
+    客户端代码，直接与 TargetInterface 交互，无需关心其具体实现
+    """
+    print(target.request(), end="")
+
+
+if __name__ == "__main__":
+    # Target（新系统） 调用
+    target = Target()
+    client_code(target)
+    print("\n")
+
+    # 使用适配器来适应旧系统
+    adapter = Adapter()
+    client_code(adapter)
+
+# 输出：
+# NewSystem's request
+# Adapter: (TRANSLATED) OldSystem's specific request
+```
 
 ### 19.x 更多设计模式
 
