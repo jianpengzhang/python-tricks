@@ -4004,6 +4004,12 @@ def check_list_with_email() -> DataChecker:
 
 通过责任链模式，新的校验逻辑可以轻松集成到现有系统中，且不影响已有的校验器，实现了代码的高度复用和扩展性。
 
+> **【扩展知识点】：`from __future__ import annotations`**  
+> `from __future__ import annotations` 是用于延迟类型注解的计算。它让 Python 在运行时才去解析类型注解，而不是在定义时立即解析。这样做可以避免在代码中由于前向引用或循环导入导致的问题。
+> 从 Python 3.10 开始，类型注解默认是延迟计算的，因此在 Python 3.10 及以上版本中不再需要手动引入 `from __future__ import annotations`。但是，在 Python 3.9 及以下版本中，仍然需要使用该语句来启用这一功能。
+> * 在 Python 3.10 及更高版本中，默认启用了 PEP 563，这使得类型注解被推迟到运行时进行求值。这一特性让你不必再手动导入 `from __future__ import annotations`。但如果你希望在更早的 Python 版本中使用此特性，仍然需要手动导入；
+> * 在 Python 3.11 中，PEP 649 被引入，并将替换 PEP 563 的实现，因此无需再手动使用 `from __future__ import annotations`；
+
 ### 19.5 策略模式（Strategy Pattern）
 
 策略模式（Strategy Pattern）是一种行为设计模式，它定义了一系列算法，并将每个算法封装到独立的类中，使得它们可以互相替换，在 Python 代码中很常见，经常在各种框架中使用，能在不扩展类的情况下向用户提供改变其行为的方式。
@@ -4534,6 +4540,101 @@ if __name__ == "__main__":
 # RESULT: Branch(Branch(Leaf+Leaf)+Branch(Leaf)+Leaf)
 ```
 
+### 19.10 外观模式（Facade Pattern）
+
+外观模式（Facade Pattern）是一种结构型设计模式，旨在为复杂的子系统提供一个简单的接口，使客户端能够更容易地与子系统交互。外观模式通过封装复杂系统的内部实现，为客户端提供一个统一的接口，从而减少客户端与系统之间的耦合。
+
+**外观模式的主要作用：**  
+* 简化接口：隐藏子系统的复杂性，提供简单易用的接口；
+* 减少依赖：通过引入外观类，客户端不需要直接依赖于复杂系统的各个部分，从而减少了系统的耦合度；
+
+**代码示例：**  
+
+```python
+from __future__ import annotations
+
+
+class Subsystem1:
+    # 子系统 1：表示复杂系统中的子系统
+    def operation1(self) -> str:
+        return "Subsystem1: Ready!"
+
+    # ... ...
+
+    def operation_n(self) -> str:
+        return "Subsystem1: Go!"
+
+
+class Subsystem2:
+    # 子系统 2：表示复杂系统中的子系统
+    def operation1(self) -> str:
+        return "Subsystem2: Ready!"
+
+    # ... ...
+
+    def operation_z(self) -> str:
+        return "Subsystem2: Go!"
+
+
+class Facade:
+    """
+    Facade 类封装了 Subsystem1 和 Subsystem2 的操作，对外提供一个统一的接口 operation，简化了子系统的操作流程
+    """
+
+    def __init__(self, subsystem1: Subsystem1, subsystem2: Subsystem2) -> None:
+        self._subsystem1 = subsystem1 or Subsystem1()
+        self._subsystem2 = subsystem2 or Subsystem2()
+
+    def operation(self) -> str:
+        # operation，简化了子系统的操作流程
+        results = []
+        results.append("Facade initializes subsystems:")
+        results.append(self._subsystem1.operation1())
+        results.append(self._subsystem2.operation1())
+        results.append("Facade orders subsystems to perform the action:")
+        results.append(self._subsystem1.operation_n())
+        results.append(self._subsystem2.operation_z())
+        return "\n".join(results)
+
+
+def client_code(facade: Facade) -> None:
+    """
+    客户端代码通过 Facade 提供的简单接口与复杂的子系统协同工作。
+    当 Facade 管理子系统的生命周期时，客户端可能根本不知道子系统的存在。 这种方法可以让复杂性得到控制。
+    """
+    print(facade.operation(), end="")
+
+
+if __name__ == "__main__":
+    subsystem1 = Subsystem1()
+    subsystem2 = Subsystem2()
+    facade = Facade(subsystem1, subsystem2)
+    client_code(facade)
+
+# 输出：
+# Facade initializes subsystems:
+# Subsystem1: Ready!
+# Subsystem2: Ready!
+# Facade orders subsystems to perform the action:
+# Subsystem1: Go!
+# Subsystem2: Go!
+```
+
+**扩展性：** 当子系统发生变化时，客户端不需要修改，只需调整 Facade 类的实现，从而有效地隔离了客户端与复杂系统的内部结构；
+
+**外观模式 与 模板方法区别：**  
+* 外观模式：  
+  * 目的: 为复杂子系统提供一个统一的接口，简化客户端的使用；
+  * 实现: 外观类封装子系统的细节，对外提供简化的接口；
+  * 使用场景: 当系统过于复杂，需要对外提供一个简单接口时；
+* 模板方法：  
+  * 目的: 定义算法的骨架，将一些步骤的实现延迟到子类；
+  * 实现: 在抽象类中定义模板方法，在子类中实现具体步骤；
+  * 使用场景: 多个类有相同的算法结构，但具体实现不同；
+* 区别：  
+  * 使用意图: 外观模式简化接口，模板方法模式定义算法骨架；
+  * 实现方式: 外观模式侧重封装子系统，模板方法模式侧重算法步骤的控制；
+  
 ### 19.x 更多设计模式
 
 本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python

@@ -60,4 +60,5 @@
     * [19.7 适配器模式（Adapter Pattern）](docs/python_features.md#197-适配器模式adapter-pattern)
     * [19.8 模板方法模式（Template Method Pattern）](docs/python_features.md#198-模板方法模式template-method-pattern)
     * [19.9 组合模式（Composite Pattern）](docs/python_features.md#199-组合模式composite-pattern)
+    * [19.10 外观模式（Facade Pattern）](docs/python_features.md#1910-外观模式facade-pattern)
 
