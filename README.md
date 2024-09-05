@@ -61,4 +61,6 @@
     * [19.8 模板方法模式（Template Method Pattern）](docs/python_features.md#198-模板方法模式template-method-pattern)
     * [19.9 组合模式（Composite Pattern）](docs/python_features.md#199-组合模式composite-pattern)
     * [19.10 外观模式（Facade Pattern）](docs/python_features.md#1910-外观模式facade-pattern)
+    * [19.11 原型模式（Prototype Pattern）](docs/python_features.md#1911-外观模式prototype-pattern)
+    * [19.x 更多设计模式](docs/python_features.md#19x-更多设计模式)
 

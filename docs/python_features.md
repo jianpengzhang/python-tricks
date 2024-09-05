@@ -4634,7 +4634,252 @@ if __name__ == "__main__":
 * 区别：  
   * 使用意图: 外观模式简化接口，模板方法模式定义算法骨架；
   * 实现方式: 外观模式侧重封装子系统，模板方法模式侧重算法步骤的控制；
-  
+ 
+### 19.11 外观模式（Prototype Pattern）
+
+原型模式（Prototype Pattern） 是一种创建型设计模式，它通过复制现有对象来创建新对象，而不是通过构造函数重新创建。这可以避免昂贵的对象创建操作，尤其在初始化代价高昂的情况下使用。
+
+**核心思想：**
+* 原型模式要求对象实现一个 clone() 方法，以便在不暴露复杂逻辑的情况下复制自身；
+* 当需要大量相似对象时，可以使用原型模式减少创建开销；
+
+**代码示例1：**  
+
+```python
+import copy
+from abc import ABC, abstractmethod
+
+
+# 定义原型接口
+class Prototype(ABC):
+
+    @abstractmethod
+    def clone(self):
+        pass
+
+
+# 具体原型类
+class ConcretePrototype(Prototype):
+    def __init__(self, value: str):
+        self.value = value
+
+    def clone(self):
+        return copy.deepcopy(self)
+
+
+# 客户端代码
+if __name__ == "__main__":
+    prototype1 = ConcretePrototype("prototype1")
+    clone1 = prototype1.clone()
+    print(f"Original: {prototype1.value}")
+    print(f"Clone: {clone1.value}")
+    clone1.value = "clone1"
+    print(f"Original: {prototype1.value}")
+    print(f"Clone: {clone1.value}")
+
+# 输出：
+# Original: prototype1
+# Clone: prototype1
+# Original: prototype1
+# Clone: clone1
+```
+
+**说明：**
+* 原型 （Prototype） 接口将对克隆方法进行声明。 在绝大多数情况下， 其中只会有一个名为 clone 克隆的方法；
+* 具体原型 （Concrete Prototype） 类将实现克隆（clone）方法，除了将原始对象的数据复制到克隆体中之外，该方法有时还需处理克隆过程中的极端情况，例如克隆关联对象和梳理递归依赖等等。这里采用 deepcopy 来确保深层次的复制；
+* 客户端 （Client） 可以复制实现了原型接口的任何对象；
+
+> **【扩展知识点：copy.deepcopy】**  
+> deepcopy 是 Python 中 copy 模块提供的一个函数，它用于深度复制对象。与浅拷贝（copy.copy()）不同，深拷贝会递归地复制对象及其包含的所有子对象。因此，原始对象和深拷贝对象完全独立，修改深拷贝对象不会影响原始对象。  
+> 
+> **浅拷贝 vs 深拷贝：**  
+> * 浅拷贝：只复制对象的引用，嵌套的子对象仍然引用同一块内存;
+> * 深拷贝：不仅复制对象本身，还递归复制所有子对象;  
+> **示例：**  
+> ```python
+> import copy
+> 
+> original = [1, [2, 3]]
+> shallow_copy = copy.copy(original)
+> deep_copy = copy.deepcopy(original)
+> 
+> # 修改嵌套列表
+> original[1][0] = 100
+> 
+> print(original)      # [1, [100, 3]]
+> print(shallow_copy)  # [1, [100, 3]] 受影响
+> print(deep_copy)     # [1, [2, 3]] 不受影响
+> 
+>  ```
+
+**代码示例2：**  
+
+这段示例代码展示了 Python 中如何通过 copy 模块实现自定义的浅拷贝和深拷贝。
+
+```python
+import copy
+
+class SelfReferencingEntity:
+    """
+    表示一个包含父对象的类，可以设置和引用其他对象。
+    """
+    def __init__(self):
+        self.parent = None
+
+    def set_parent(self, parent):
+        """
+        设置父对象为传入的对象实例。
+        """
+        self.parent = parent
+
+
+class SomeComponent:
+    """
+    一个复杂对象，包含整型值、对象列表和循环引用。
+    该类通过自定义的 `__copy__` 和 `__deepcopy__` 来实现浅拷贝和深拷贝。
+    """
+    def __init__(self, some_int, some_list_of_objects, some_circular_ref):
+        self.some_int = some_int  # 一个整型值
+        self.some_list_of_objects = some_list_of_objects  # 一个包含对象的列表
+        self.some_circular_ref = some_circular_ref  # 一个循环引用对象
+
+    def __copy__(self):
+        """
+        实现浅拷贝：只复制对象的引用。
+        当调用 copy.copy() 时，会调用此方法。
+        """
+        # 对嵌套的对象进行浅拷贝
+        some_list_of_objects = copy.copy(self.some_list_of_objects)
+        some_circular_ref = copy.copy(self.some_circular_ref)
+
+        # 克隆对象并使用准备好的嵌套对象副本
+        new = self.__class__(
+            self.some_int, some_list_of_objects, some_circular_ref
+        )
+        new.__dict__.update(self.__dict__)  # 更新新对象的属性
+
+        return new
+
+    def __deepcopy__(self, memo=None):
+        """
+        实现深拷贝：递归复制对象及其嵌套对象。
+        当调用 copy.deepcopy() 时，会调用此方法。
+        memo 是一个防止循环引用的字典。
+        """
+        if memo is None:
+            memo = {}
+
+        # 对嵌套的对象进行深拷贝
+        some_list_of_objects = copy.deepcopy(self.some_list_of_objects, memo)
+        some_circular_ref = copy.deepcopy(self.some_circular_ref, memo)
+
+        # 克隆对象并使用准备好的嵌套对象副本
+        new = self.__class__(
+            self.some_int, some_list_of_objects, some_circular_ref
+        )
+        new.__dict__ = copy.deepcopy(self.__dict__, memo)
+
+        return new
+
+
+if __name__ == "__main__":
+
+    # 初始化对象及循环引用
+    list_of_objects = [1, {1, 2, 3}, [1, 2, 3]]
+    circular_ref = SelfReferencingEntity()
+    component = SomeComponent(23, list_of_objects, circular_ref)
+    circular_ref.set_parent(component)
+
+    # 浅拷贝对象
+    shallow_copied_component = copy.copy(component)
+
+    # 修改浅拷贝中的列表，检查原对象是否受影响
+    shallow_copied_component.some_list_of_objects.append("another object")
+    if component.some_list_of_objects[-1] == "another object":
+        print("浅拷贝的修改影响了原对象")
+    else:
+        print("浅拷贝的修改未影响原对象")
+
+    # 修改集合，检查浅拷贝是否受影响
+    component.some_list_of_objects[1].add(4)
+    if 4 in shallow_copied_component.some_list_of_objects[1]:
+        print("修改原对象集合影响了浅拷贝")
+    else:
+        print("修改原对象集合未影响浅拷贝")
+
+    # 深拷贝对象
+    deep_copied_component = copy.deepcopy(component)
+
+    # 修改深拷贝中的列表，检查原对象是否受影响
+    deep_copied_component.some_list_of_objects.append("one more object")
+    if component.some_list_of_objects[-1] == "one more object":
+        print("深拷贝的修改影响了原对象")
+    else:
+        print("深拷贝的修改未影响原对象")
+
+    # 修改集合，检查深拷贝是否受影响
+    component.some_list_of_objects[1].add(10)
+    if 10 in deep_copied_component.some_list_of_objects[1]:
+        print("修改原对象集合影响了深拷贝")
+    else:
+        print("修改原对象集合未影响深拷贝")
+
+    # 打印循环引用的 ID，证明深拷贝处理了循环引用
+    print(
+        f"id(deep_copied_component.some_circular_ref.parent): "
+        f"{id(deep_copied_component.some_circular_ref.parent)}"
+    )
+    print(
+        f"id(deep_copied_component.some_circular_ref.parent.some_circular_ref.parent): "
+        f"{id(deep_copied_component.some_circular_ref.parent.some_circular_ref.parent)}"
+    )
+    print("^^ 深拷贝处理了循环引用，并没有重复克隆。")
+
+# 输出：
+# 浅拷贝的修改影响了原对象
+# 修改原对象集合影响了浅拷贝
+# 深拷贝的修改未影响原对象
+# 修改原对象集合未影响深拷贝
+# id(deep_copied_component.some_circular_ref.parent): 140576636458848
+# id(deep_copied_component.some_circular_ref.parent.some_circular_ref.parent): 140576636458848
+# ^^ 深拷贝处理了循环引用，并没有重复克隆。
+```
+
+**代码解释：**  
+* SelfReferencingEntity 类  
+  这个类的主要目的是展示循环引用问题，它拥有一个 parent 属性，表示该对象的父级。
+  * set_parent 方法：设置当前对象的父级；
+
+* SomeComponent 类  
+  此类表示一个带有复杂结构的组件，其中包含一个整数、一个对象列表以及一个循环引用。此类通过实现 `__copy__` 和 `__deepcopy__` 方法，展示如何自定义浅拷贝和深拷贝的行为。
+  * 构造函数：接受一个整数、一个对象列表和一个循环引用对象作为参数。  
+  * `__copy__` 方法：实现浅拷贝，使用 copy.copy 对象的嵌套属性来创建新实例。
+    * copy.copy(self.some_list_of_objects) 创建了对象列表的浅拷贝;
+    * 最终返回的 new 是浅拷贝对象，且其属性是对原对象嵌套对象的引用;
+  * `__deepcopy__` 方法：实现深拷贝，通过 copy.deepcopy 递归地复制嵌套对象，并通过 memo 参数避免循环引用问题。  
+    * memo 是一个字典，记录已经复制过的对象，防止无限递归；
+
+* 测试部分  
+在 `__main__` 部分中，创建了一个嵌套对象 component 和 circular_ref，并分别展示了浅拷贝和深拷贝的行为差异。
+  * 浅拷贝测试：  
+    * 修改 shallow_copied_component.some_list_of_objects 会影响原始对象 component，因为它们共享同一个引用；
+    * 修改 component.some_list_of_objects[1] 中的集合也会影响浅拷贝对象，因为这只是浅层引用；
+  * 深拷贝测试：
+    * 修改 deep_copied_component.some_list_of_objects 不会影响原对象 component，因为深拷贝创建了完全独立的副本；
+    * 循环引用测试：deep_copied_component 的 parent 属性中的引用保持不变，避免了无限循环；
+
+**主要原理：**  
+
+* 浅拷贝 (__copy__)：  
+  * 拷贝对象本身，但嵌套的对象（如列表、集合等）仍与原对象共享；
+  * 修改嵌套对象会影响拷贝和原对象；
+* 深拷贝 (__deepcopy__)：
+  * 递归复制对象及其嵌套的对象，确保它们独立；
+  * 使用 memo 参数避免循环引用导致的无限递归；
+* 循环引用：
+  * 深拷贝处理了循环引用的情况，通过 memo 确保不会无限递归；
+  * 此代码展示了原型模式如何通过浅拷贝和深拷贝来复制复杂对象，同时处理嵌套对象和循环引用问题；
+
 ### 19.x 更多设计模式
 
 本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python
