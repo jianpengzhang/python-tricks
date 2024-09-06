@@ -4978,3 +4978,284 @@ if __name__ == "__main__":
 ### 19.x 更多设计模式
 
 本站包含各种设计模式及用例（创建新模式、结构性模式、行为模式），后续慢慢补充：https://refactoringguru.cn/design-patterns/python
+
+## 20. 进程（Process）、线程（Thread）、协程（Coroutine）
+
+### 20.1 进程（Process）
+
+进程是操作系统分配资源的基本单位，每个进程拥有独立的内存空间。一个程序运行后至少会有一个主进程，主进程可以派生出多个子进程。
+
+**特点：**  
+* 独立性：每个进程有自己独立的内存空间，不会与其他进程共享数据；
+* 多核并行：可以充分利用多核 CPU 进行真正的并行计算；
+* 隔离性好：进程之间互相隔离，崩溃的进程不会影响其他进程；
+
+**缺点：**  
+* 创建开销大：进程创建的开销比线程和协程更大，因为需要分配独立的内存空间；
+* 进程间通信复杂：由于进程间不共享内存，需要通过 IPC (Inter-Process Communication) 进行通信，比如管道 (Pipe)、消息队列 (Queue)、共享内存 (Shared Memory) 等；
+
+**使用场景：**  
+* CPU 密集型任务，如图像处理、视频编码等需要多核并行计算的任务；
+
+**代码示例：**  
+```python
+import multiprocessing
+
+def worker(num):
+    print(f'Worker: {num}')
+
+if __name__ == '__main__':
+    processes = []
+    for i in range(5):
+        p = multiprocessing.Process(target=worker, args=(i,))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+```
+
+在 Python 3 中，multiprocessing 模块提供了丰富的 API 来进行进程管理和进程间通信。以下是常用的进程使用用例，包括进程池 (Pool)、子进程 (Process) 以及进程间通信 (Queue, Pipe, Manager)。
+
+#### 20.1.1 创建子进程 (Process)
+
+在 Python 中，当你运行一个脚本时，该脚本的执行进程就是所谓的“主进程”。当主进程使用 multiprocessing 模块创建子进程时，子进程会作为主进程的子进程运行。这种父子关系意味着主进程负责管理和控制子进程的生命周期。
+
+**主进程与子进程的关系：**  
+* 主进程：这是运行脚本时操作系统分配的最初进程。主进程负责创建和管理子进程，并等待子进程完成或终止它们；
+  * 等待子进程完成 (join())，终止子进程 (terminate())，也可以不等待子进程而继续执行其他任务（不使用 join()）  
+* 子进程：由主进程创建的进程，子进程在独立的内存空间中运行，并且可以执行与主进程不同的代码片段。子进程运行在自己的上下文中，有自己独立的进程 ID；
+
+**Process 对象配置参数：**  
+在 multiprocessing 模块中，Process 类用于创建子进程。创建子进程时，可以通过以下参数配置子进程的行为：
+
+* target：这是子进程要执行的目标函数。在创建子进程时，target 参数指定函数的引用，子进程启动后将执行该函数的内容；
+* args：这是传递给目标函数的参数。它需要是一个元组，即使目标函数只有一个参数，也需要在参数后加一个逗号，例如 args=(i,)；
+* kwargs：可以传递给目标函数的关键字参数，使用字典格式；
+* name：为子进程指定一个名字。默认情况下，进程会自动分配一个名字，如 Process-1；
+* daemon：设定是否为守护进程。守护进程会在主进程结束时自动终止。daemon=True 将进程设为守护进程；
+
+**子进程方法：**  
+* start()：启动子进程，调用 start() 方法后，子进程会在后台运行，执行指定的 target 函数。
+* join()：阻塞主进程，直到调用该方法的子进程结束。join() 方法常用于确保主进程等待所有子进程完成后再继续执行。join() 可以设置 timeout 参数来指定等待时间。
+* is_alive()：检查子进程是否还在运行，返回 True 或 False。
+* terminate()：立即终止子进程。这通常用于在异常情况下强制停止子进程。
+
+**示例说明：**  
+
+以下是一个使用 multiprocessing 创建和管理子进程的简单示例，包含对上述方法的应用：
+
+```python
+import os
+import multiprocessing
+import time
+
+
+def worker(num):
+    print(f'Worker {num} started, Process ID: {multiprocessing.current_process().pid}')
+    time.sleep(2)
+    print(f'Worker {num} finished')
+
+
+if __name__ == '__main__':
+    print(f'Main Process, Process ID:{os.getpid()}')
+    processes = []
+    for i in range(3):
+        # 创建子进程，每个子进程执行 worker 函数
+        p = multiprocessing.Process(target=worker, args=(i,))
+        processes.append(p)
+        # 使用 p.start() 方法启动子进程，子进程开始在后台运行
+        p.start()
+
+    for p in processes:
+        # p.join() 方法阻塞主进程，直到对应的子进程执行完毕。这确保了主进程在所有子进程结束后再继续运行后续代码。
+        p.join()  # 主进程将在此处等待所有子进程完成
+    # 所有子进程执行完后，主进程输出 "All processes finished"
+    print('All processes finished')
+```
+
+输出：主进程将等待子进程结束后输出 “All processes finished” 
+```text
+Main Process, Process ID:3740705
+Worker 0 started, Process ID: 3740706
+Worker 1 started, Process ID: 3740707
+Worker 2 started, Process ID: 3740708
+Worker 0 finished
+Worker 1 finished
+Worker 2 finished
+All processes finished
+```
+控制台进程查看：可以看到上述输出进程 PID 与终端输出一致，包括主进程 & 子进程总共运行 4 个进程。
+
+```text
+jpzhang   3741438  1.5  0.0  23520 13488 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang   3741439  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang   3741440  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang   3741441  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+```
+
+若注释 p.join() 相关代码，主进程将不会等待子进程结束，而是继续运行，输出类似如下：  
+
+```text
+Main Process, Process ID:3741438
+All processes finished
+Worker 0 started, Process ID: 3741439
+Worker 2 started, Process ID: 3741441
+Worker 1 started, Process ID: 3741440
+Worker 0 finished
+Worker 2 finished
+Worker 1 finished
+```
+
+若将子进程设置为守护进程：multiprocessing.Process(target=worker, args=(i,), daemon=True)，则主进程结束时子进程自动终止（前提是 "注释 p.join() 相关代码"，避免主进程等待子进程结束）。
+```text
+Main Process, Process ID:3742353
+All processes finished
+Worker 0 started, Process ID: 3742354
+
+进程已结束，退出代码为 0
+```
+主进程结束，守护进程自动终止。
+
+### 20.2 线程 (Thread)
+
+线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
+
+**特点：**  
+* 轻量级：相比于进程，线程的创建和销毁成本较低；
+* 共享内存：线程之间可以共享内存空间，这使得线程间通信更加便捷；
+
+**缺点：**  
+* GIL 限制：在 CPython 解释器中，线程受到全局解释器锁（GIL）的限制，导致 Python 的多线程在 CPU 密集型任务中无法利用多核并行执行；
+* 安全问题：由于线程共享内存，多个线程同时修改共享数据时，可能会发生竞争条件，需要使用锁 (Lock) 等同步机制来防止数据竞争；
+
+**使用场景：**  
+* I/O 密集型任务，如文件读写、网络请求等；
+
+**代码示例：**  
+```python
+import threading
+
+def worker(num):
+    print(f'Worker: {num}')
+
+threads = []
+for i in range(5):
+    t = threading.Thread(target=worker, args=(i,))
+    threads.append(t)
+    t.start()
+
+for t in threads:
+    t.join()
+```
+
+### 20.3 协程 (Coroutine)
+
+协程是 Python 中的一种轻量级并发模型，通过异步编程实现任务的切换。协程与进程和线程不同，它不是由操作系统调度，而是通过程序本身来控制。
+
+**特点：**  
+* 轻量级：协程不需要额外的线程或进程开销，它在单线程中通过事件循环实现异步执行，因此比线程和进程更高效；
+* 无锁设计：由于协程在同一线程中运行，不需要考虑锁等同步机制，避免了多线程中的竞争问题；
+* 非阻塞：协程在等待 I/O 操作时可以主动让出控制权，其他协程可以继续执行，从而提高程序的并发性；
+
+**缺点：**  
+* 单线程：协程不能利用多核 CPU 进行并行计算；
+* 学习成本：相对于线程和进程，协程需要更复杂的编程模型，如事件循环、async/await 语法等；
+
+**使用场景：**  
+* I/O 密集型任务，如高并发的网络服务、异步文件操作等；
+
+**代码示例：**  
+```python
+import asyncio
+
+async def worker(num):
+    print(f'Worker {num} starting')
+    await asyncio.sleep(1)
+    print(f'Worker {num} finished')
+
+async def main():
+    tasks = [worker(i) for i in range(5)]
+    await asyncio.gather(*tasks)
+
+asyncio.run(main())
+```
+
+### 20.4 并行 & 并发
+
+在计算机科学中，“并行”和“并发”是两种不同的概念，它们虽然都涉及到多任务处理，但在执行任务的方式上有着明显的区别。下面分别对这两个概念进行解释：
+
+#### 20.4.1 并行 (Parallelism)
+
+并行指的是多个任务同时在多个处理器或 CPU 核心上运行。并行任务的执行方式是同时进行的，多个任务真正地同时执行，以此来提高程序的执行效率。
+
+**特点：**  
+* 物理并行：需要多个 CPU 核心或处理器来实现，因为每个任务会在不同的核心上同时运行；
+* 同时执行：所有任务在同一时刻运行，并行计算可以提高程序执行的速度，尤其是在多核 CPU 环境下；
+* 适用于 CPU 密集型任务：并行更适合需要大量计算的任务，如科学计算、图像处理等；
+
+**举例：**  
+在多核处理器中，一个核心执行任务 A，另一个核心同时执行任务 B，这就是并行。比如图像渲染或视频编码时，每个帧可以分配给不同的处理器核心。
+
+**图示：**  
+```
+任务 A |=====| 
+任务 B |=====| 
+任务 C |=====| 
+
+同一时刻多个任务同时执行。
+```
+
+#### 20.4.2 并发 (Concurrency)
+
+并发是指在一个时间段内，有多个任务可以交替执行。并发不一定要求多个任务同时进行，而是多个任务在多个时间片内切换执行。它的目的是提高系统的响应性，而不是直接加快任务的执行速度。
+
+**特点：**  
+* 任务交替执行：即使只有一个 CPU 核心，多个任务也可以通过切换时间片的方式交替执行，达到 “同时处理多个任务” 的效果；
+* 逻辑并行：在单核处理器上，并发任务实际上是按顺序执行的，但由于任务切换速度非常快，用户感觉像是同时执行的；
+* 适用于 I/O 密集型任务：并发适合需要等待 I/O 操作的任务，如网络请求、文件读写等，因为任务在等待时可以让出 CPU 资源，让其他任务继续执行；
+
+**举例：**  
+一个操作系统同时处理多个任务，比如用户在浏览网页的同时，音乐播放器在后台播放音乐。这些任务实际上是交替运行的，操作系统快速切换任务，使得用户感觉它们是在同时进行。
+
+**图示：**  
+
+```
+任务 A |==    ==    ==|
+任务 B |  ==    ==    ==|
+任务 C |    ==    ==    ==|
+
+任务 A、B、C 轮流执行，在切换时间片时交替运行。
+```
+
+#### 20.4.3 并行与并发的区别
+
+| 特性 | 并行 (Parallelism)  | 	   并发 (Concurrency)       |
+|:---| :---------|:---------|
+| 核心概念   | 多个任务真正同时执行 | 多个任务交替执行 |
+| 依赖硬件   | 依赖多核 CPU 或多处理器 | 可以在单核或多核 CPU 上实现 |
+| 适用场景   | CPU 密集型任务 (如计算、渲染) | I/O 密集型任务 (如网络请求、文件读写) |
+| 执行效率   | 提高任务执行的速度 | 提高系统响应性 |
+| 执行方式   | 物理上同时运行 | 逻辑上同时运行 |
+| 资源共享   | 每个任务可能运行在独立的资源上 | 任务之间共享资源或切换使用资源 |
+| 代表模型   | 多进程 (Multiprocessing) | 多线程、协程 |
+
+**总结：**  
+* 并行是多任务真正同时在不同的处理器上运行，需要硬件支持多核 CPU；
+* 并发是在同一时间段内交替执行多个任务，通常不需要多个核心，而是通过任务切换实现任务的同时处理效果；
+
+可以根据程序的需求来选择并行或并发。例如，如果需要处理大量计算，可以选择并行；如果任务涉及大量 I/O 操作，选择并发会更合适。
+
+### 20.5 进程、线程、协程对比
+
+| 特性 | 进程  | 	   线程       | 	   协程       |
+|:---| :---------|:---------|:---------|
+|  并行/并发  | 并行 | 并发 | 并发 |
+|  内存空间  | 独立 | 共享 | 共享 |
+|  创建开销  | 高 | 中 | 低 |
+|  通信方式  | IPC (管道等) | 共享变量 | 事件循环 |
+|  GIL 限制  | 无 | 有 (CPython) | 无 |
+|  适用场景  | CPU 密集型任务 | I/O 密集型任务 | I/O 密集型任务 |
+
+总之，进程适合 CPU 密集型任务，而线程和协程适合 I/O 密集型任务。协程是目前在 Python 中实现高并发的首选方式，尤其适用于网络应用和异步操作。
+可以根据具体的应用场景选择适合的并发模型。
