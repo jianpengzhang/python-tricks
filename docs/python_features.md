@@ -4634,7 +4634,7 @@ if __name__ == "__main__":
 * 区别：  
   * 使用意图: 外观模式简化接口，模板方法模式定义算法骨架；
   * 实现方式: 外观模式侧重封装子系统，模板方法模式侧重算法步骤的控制；
- 
+
 ### 19.11 原型模式（Prototype Pattern）
 
 原型模式（Prototype Pattern） 是一种创建型设计模式，它通过复制现有对象来创建新对象，而不是通过构造函数重新创建。这可以避免昂贵的对象创建操作，尤其在初始化代价高昂的情况下使用。
@@ -4879,6 +4879,101 @@ if __name__ == "__main__":
 * 循环引用：
   * 深拷贝处理了循环引用的情况，通过 memo 确保不会无限递归；
   * 此代码展示了原型模式如何通过浅拷贝和深拷贝来复制复杂对象，同时处理嵌套对象和循环引用问题；
+
+### 19.12 状态模式（State Pattern）
+
+状态模式是一种行为设计模式，允许对象在内部状态改变时改变其行为。这种模式对于对象在不同状态下有不同行为的场景非常有用。它通过将状态的行为分离到独立的类中，从而简化了状态的管理，避免了大量的条件分支。
+
+**核心概念：**  
+* Context: 状态的管理对象，维护当前状态并将行为委托给状态对象；
+* State: 表示对象的状态，定义状态下的行为；
+* Concrete States: 具体状态的实现类；
+
+**代码示例：**  
+```python
+from abc import ABC, abstractmethod
+
+
+class State(ABC):
+    """
+    定义状态类接口，所有具体状态类需要实现此接口的行为
+    """
+
+    @abstractmethod
+    def handle(self, context):
+        pass
+
+
+class ConcreteStateReady(State):
+    """
+    具体状态 Ready 的行为实现
+    """
+
+    def handle(self, context):
+        print("State Ready: 处理请求，切换到 State Start")
+        context.set_state(ConcreteStateStart())
+
+
+class ConcreteStateStart(State):
+    """
+    具体状态 Start 的行为实现
+    """
+
+    def handle(self, context):
+        print("State Start: 处理请求，切换到 State End")
+        context.set_state(ConcreteStateEnd())
+
+
+class ConcreteStateEnd(State):
+    """
+    具体状态 End 的行为实现
+    """
+
+    def handle(self, context):
+        print("State End: 处理请求，切换到 State Ready")
+        context.set_state(ConcreteStateReady())
+
+
+class Context:
+    """
+    上下文类，持有状态，并将请求委托给当前状态处理
+    """
+
+    def __init__(self, state: State):
+        self._state = state  # 初始化时设置初始状态
+
+    def set_state(self, state: State):
+        """
+        改变当前状态
+        """
+        self._state = state
+
+    def request(self):
+        """
+        将请求委托给当前状态对象处理
+        """
+        self._state.handle(self)
+
+
+# 使用状态模式
+if __name__ == "__main__":
+    context = Context(ConcreteStateReady())  # 设置初始状态为 State Ready
+    context.request()  # State Ready: 切换到 State Start
+    context.request()  # State Start: 切换到 State End
+    context.request()  # State End: 切换到 State Ready
+
+# 输出：
+# State Ready: 处理请求，切换到 State Start
+# State Start: 处理请求，切换到 State End
+# State End: 处理请求，切换到 State Ready
+```
+
+**解释：**  
+* Context 类负责维护当前状态，并在需要时切换状态；
+* State 类是状态的抽象基类，具体状态类继承它并实现各自的 handle() 方法；
+* ConcreteStateA 和 ConcreteStateB 是两个具体状态，它们的 handle() 方法执行特定操作并切换到另一个状态；
+
+通过这种设计，状态的变化是动态的，避免了复杂的 if-else 或 switch 语句，并且每个状态的行为都被封装在对应的类中，使得代码更加清晰和可扩展。
 
 ### 19.x 更多设计模式
 

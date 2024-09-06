@@ -62,5 +62,6 @@
     * [19.9 组合模式（Composite Pattern）](docs/python_features.md#199-组合模式composite-pattern)
     * [19.10 外观模式（Facade Pattern）](docs/python_features.md#1910-外观模式facade-pattern)
     * [19.11 原型模式（Prototype Pattern）](docs/python_features.md#1911-原型模式prototype-pattern)
+    * [19.12 状态模式 (State Pattern) ](docs/python_features.md#1912-状态模式state-pattern)
     * [19.x 更多设计模式](docs/python_features.md#19x-更多设计模式)
 
