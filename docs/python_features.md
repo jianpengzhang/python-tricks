@@ -5499,6 +5499,20 @@ if __name__ == '__main__':
 
 【重要提示】：callback 仅在所有任务成功完成时才会调用，而 error_callback 在任一任务失败时触发。因此，不能同时期望 callback 和 error_callback 在同一批任务中都被调用。
 
+#### 20.1.2.4 总结
+
+* 同步 vs 异步：
+  * apply, map, starmap 是同步的，主进程会等待任务完成；
+  * apply_async, map_async, starmap_async 是异步的，主进程可以继续其他任务；
+  
+* 单个 vs 多个参数：
+  * apply, apply_async 处理单个参数；
+  * map, map_async 处理单个参数的 iterable；
+  * starmap, starmap_async 处理多个参数的 iterable，每个元素是参数元组；
+
+回调函数：
+* 异步方法可以接受 callback 和 error_callback，处理任务成功或失败后的操作；
+
 ### 20.2 线程 (Thread)
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
