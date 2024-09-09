@@ -5147,6 +5147,60 @@ if __name__ == '__main__':
 
 以下通过示例分别介绍 Pool 多种分发任务方式。
 
+#### 20.1.3 进程间通信（Inter-Process Communication, IPC）
+
+进程间通信（Inter-Process Communication, IPC）是指不同进程之间交换数据的机制。在 Python 的 multiprocessing 模块中，常用的 IPC 方式包括 Queue、Pipe 和 Manager，它们可以帮助不同进程之间安全、有效地传递数据。下面详细介绍它们的使用和特点。
+
+#### 20.1.3.1 队列 (Queue)
+
+Queue 是一种线程和进程安全的队列，用于在线程和进程之间传递数据。它基于先进先出（FIFO）的原则工作，支持多个生产者和多个消费者。
+在进程模式下，Python 提供了 multiprocessing.Queue，它是通过底层的管道（Pipe）和锁（Lock）机制实现的安全队列，可以在不同的进程间传递数据。
+
+**特点：**  
+* 线程（queue.Queue，下文介绍线程在展开说明）和进程（multiprocessing.Queue）安全：Queue 是线程和进程安全的，支持多生产者和多消费者模式；
+* 阻塞与非阻塞操作：Queue 的 get() 和 put() 方法可以设置为阻塞或非阻塞模式；
+* 容量限制：可以设置 Queue 的最大容量，默认无限制；
+
+**示例：**  
+
+```python
+# 进程间通信
+import multiprocessing
+
+
+def producer(queue):
+    for item in range(5):
+        print(f'Producing {item}')
+        queue.put(item)
+
+
+def consumer(queue):
+    while True:
+        item = queue.get()
+        if item is None:  # Sentinel to stop the process
+            break
+        print(f'Consuming {item}')
+
+
+if __name__ == '__main__':
+    queue = multiprocessing.Queue()
+
+    # 创建生产者和消费者进程
+    producer_process = multiprocessing.Process(target=producer, args=(queue,))
+    consumer_process = multiprocessing.Process(target=consumer, args=(queue,))
+
+    producer_process.start()
+    consumer_process.start()
+
+    producer_process.join()
+
+    # 向队列发送 None 作为结束信号
+    queue.put(None)
+
+    consumer_process.join()
+```
+
+
 #### 20.1.2.1 apply & apply_async  
 
 创建进程池:
@@ -5157,7 +5211,7 @@ from multiprocessing import Pool
 # 创建一个进程池，指定池中的进程数量
 pool = Pool(processes=4)
 ```
-processes 参数指定了进程池中的进程数。如果省略，默认会使用 os.cpu_count() 来确定。
+【注意】processes 参数指定了进程池中的进程数。如果省略，默认会使用 os.cpu_count() 来确定。
 
 * apply 和 apply_async  
   * apply(func, args=(), kwargs={})：同步执行指定的函数 func，并传入 args 和 kwargs。执行完毕后，返回函数的结果。这个方法类似于直接调用函数，但是在进程池中执行；

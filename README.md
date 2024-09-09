@@ -68,4 +68,5 @@
     * [20.1 进程 (Process)](docs/python_features.md#201-进程process)
         * [20.1.1 子进程 (Process)](docs/python_features.md#2011-子进程-process)
         * [20.1.2 进程池 (Pool)](docs/python_features.md#2012-进程池-pool)
+        * [20.1.3 进程间通信（Inter-Process Communication, IPC）](docs/python_features.md#2013-进程间通信inter-process-communication-ipc)
 
