@@ -66,4 +66,6 @@
     * [19.x 更多设计模式](docs/python_features.md#19x-更多设计模式)
 * [20 进程 (Process)、线程 (Thread)、协程 (Coroutine)](docs/python_features.md#20-进程process线程thread协程coroutine)
     * [20.1 进程 (Process)](docs/python_features.md#201-进程process)
+        * [20.1.1 子进程 (Process)](docs/python_features.md#2011-子进程-process)
+        * [20.1.2 进程池 (Pool)](docs/python_features.md#2012-进程池-pool)
 

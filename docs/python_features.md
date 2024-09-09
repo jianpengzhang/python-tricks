@@ -5017,7 +5017,7 @@ if __name__ == '__main__':
 
 在 Python 3 中，multiprocessing 模块提供了丰富的 API 来进行进程管理和进程间通信。以下是常用的进程使用用例，包括进程池 (Pool)、子进程 (Process) 以及进程间通信 (Queue, Pipe, Manager)。
 
-#### 20.1.1 创建子进程 (Process)
+#### 20.1.1 子进程 (Process)
 
 在 Python 中，当你运行一个脚本时，该脚本的执行进程就是所谓的“主进程”。当主进程使用 multiprocessing 模块创建子进程时，子进程会作为主进程的子进程运行。这种父子关系意味着主进程负责管理和控制子进程的生命周期。
 
@@ -5046,22 +5046,25 @@ if __name__ == '__main__':
 以下是一个使用 multiprocessing 创建和管理子进程的简单示例，包含对上述方法的应用：
 
 ```python
-import os
 import multiprocessing
+import os
 import time
 
 
 def worker(num):
-    print(f'Worker {num} started, Process ID: {multiprocessing.current_process().pid}')
+    print(
+        f'Worker {num} started, Process ID: {multiprocessing.current_process().pid}, Name:{multiprocessing.current_process().name}')
     time.sleep(2)
     print(f'Worker {num} finished')
 
 
 if __name__ == '__main__':
-    print(f'Main Process, Process ID:{os.getpid()}')
+    print(f'Main Process, Process ID:{os.getpid()}, Name:{multiprocessing.current_process().name}')
+    num_processes = multiprocessing.cpu_count()  # 获取CPU核心数量
     processes = []
-    for i in range(3):
+    for i in range(num_processes):
         # 创建子进程，每个子进程执行 worker 函数
+        # p = multiprocessing.Process(target=worker, args=(i,), daemon=True)
         p = multiprocessing.Process(target=worker, args=(i,))
         processes.append(p)
         # 使用 p.start() 方法启动子进程，子进程开始在后台运行
@@ -5076,10 +5079,10 @@ if __name__ == '__main__':
 
 输出：主进程将等待子进程结束后输出 “All processes finished” 
 ```text
-Main Process, Process ID:3740705
-Worker 0 started, Process ID: 3740706
-Worker 1 started, Process ID: 3740707
-Worker 2 started, Process ID: 3740708
+Main Process, Process ID:43716, Name:MainProcess
+Worker 0 started, Process ID: 43717, Name:Process-1
+Worker 1 started, Process ID: 43718, Name:Process-2
+Worker 2 started, Process ID: 43719, Name:Process-3
 Worker 0 finished
 Worker 1 finished
 Worker 2 finished
@@ -5088,34 +5091,413 @@ All processes finished
 控制台进程查看：可以看到上述输出进程 PID 与终端输出一致，包括主进程 & 子进程总共运行 4 个进程。
 
 ```text
-jpzhang   3741438  1.5  0.0  23520 13488 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
-jpzhang   3741439  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
-jpzhang   3741440  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
-jpzhang   3741441  0.0  0.0  23520  9664 ?        S    16:46   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang     43716  0.4  0.0  23520 13488 ?        S    10:01   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang     43717  0.0  0.0  23520  9668 ?        S    10:01   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang     43718  0.0  0.0  23520  9668 ?        S    10:01   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
+jpzhang     43719  0.0  0.0  23520  9668 ?        S    10:01   0:00 /home/jpzhang/workspace/py-env/py3.12-dev-env/bin/python3.12 /home/jpzhang/workspace/examples/python-tricks/src/process_demo20_01.py
 ```
 
 若注释 p.join() 相关代码，主进程将不会等待子进程结束，而是继续运行，输出类似如下：  
 
 ```text
-Main Process, Process ID:3741438
+Main Process, Process ID:44231, Name:MainProcess
 All processes finished
-Worker 0 started, Process ID: 3741439
-Worker 2 started, Process ID: 3741441
-Worker 1 started, Process ID: 3741440
+Worker 0 started, Process ID: 44232, Name:Process-1
+Worker 1 started, Process ID: 44233, Name:Process-2
+Worker 2 started, Process ID: 44234, Name:Process-3
 Worker 0 finished
-Worker 2 finished
 Worker 1 finished
+Worker 2 finished
 ```
 
 若将子进程设置为守护进程：multiprocessing.Process(target=worker, args=(i,), daemon=True)，则主进程结束时子进程自动终止（前提是 "注释 p.join() 相关代码"，避免主进程等待子进程结束）。
+
 ```text
-Main Process, Process ID:3742353
+Main Process, Process ID:44367, Name:MainProcess
+Worker 0 started, Process ID: 44368, Name:Process-1
 All processes finished
-Worker 0 started, Process ID: 3742354
 
 进程已结束，退出代码为 0
 ```
 主进程结束，守护进程自动终止。
+
+#### 20.1.2 进程池 (Pool)
+
+在 Python 中，multiprocessing.Pool 提供了一种简单的方式来管理进程池，以并发地执行任务。进程池允许你预先创建一组工作进程，并通过这些进程来执行多个任务，避免频繁地创建和销毁进程所带来的开销。Pool 对象支持多种方法来分发任务，包括同步和异步方式。
+
+**示例：**  
+
+```python
+import multiprocessing
+import os
+
+
+def worker(num):
+    print(f'Worker: {num}, PID: {os.getpid()}')
+    return num * num
+
+
+if __name__ == '__main__':
+    # 创建一个进程池，最多允许 3 个进程同时执行
+    with multiprocessing.Pool(processes=3) as pool:
+        # map(worker, range(5)):将任务分配给进程池中的工作进程并行执行，map 方法返回一个列表，其中包含 worker 函数的返回值。
+        results = pool.map(worker, range(5))
+    print(results)
+```
+
+以下通过示例分别介绍 Pool 多种分发任务方式。
+
+#### 20.1.2.1 apply & apply_async  
+
+创建进程池:
+
+```python
+from multiprocessing import Pool
+
+# 创建一个进程池，指定池中的进程数量
+pool = Pool(processes=4)
+```
+processes 参数指定了进程池中的进程数。如果省略，默认会使用 os.cpu_count() 来确定。
+
+* apply 和 apply_async  
+  * apply(func, args=(), kwargs={})：同步执行指定的函数 func，并传入 args 和 kwargs。执行完毕后，返回函数的结果。这个方法类似于直接调用函数，但是在进程池中执行；
+  * apply_async(func, args=(), kwargs={}, callback=None, error_callback=None)：异步执行指定的函数 func。它立即返回一个 ApplyResult 对象，可以通过 get() 方法来获取结果。callback 是一个可选的回调函数，用于处理结果，error_callback 用于处理异常。
+
+**示例代码：**  
+
+```python
+import multiprocessing
+import time
+
+
+def square(x):
+    time.sleep(20)
+    return x * x
+
+
+# __name__ == '__main__' 确保只有在直接运行脚本时才会执行主程序块。这是 Python 中防止在 Windows 平台上重复创建进程的必要条件
+if __name__ == '__main__':
+    # 创建一个包含 4 个工作进程的进程池（Pool 对象），进程池将管理和分发任务到这些进程中。
+    pool = multiprocessing.Pool(processes=4)
+
+    # 同步调用：
+    # apply 方法将任务 square(10) 分派给一个进程，主进程会等待任务完成后再继续执行
+    # 由于 square 函数内部有 time.sleep(20)，因此主进程会等待 20 秒
+    # result 保存 square(10) 的返回值，也就是 100
+    result = pool.apply(square, args=(10,))
+    print(f'Synchronous result: {result}')
+
+    # 异步调用：
+    # apply_async 方法将任务 square(10) 分派给一个进程，但不会阻塞主进程，主进程可以继续执行后续代码
+    # async_result 是一个 ApplyResult 对象，表示异步调用的返回值
+    async_result = pool.apply_async(square, args=(10,))
+    # async_result.get() 会阻塞主进程，直到异步任务完成并返回结果
+    # 因为 square(10) 需要 20 秒来完成，所以主进程在这行代码上会等待任务完成并获取结果 100
+    print(f'Asynchronous result: {async_result.get()}')
+
+    # 调用 join 之前，先调用 close 函数，否则会出错。执行完 close 后不会有新的进程加入到 pool,join 函数等待所有子进程结束
+    # 关闭进程池，表示不再接受新的任务：当进程池 close 的时候并未关闭进程池，只是会把状态改为不可再插入元素的状态
+    pool.close()
+    # 等待进程池中所有任务完成。在此之后，主进程才会继续执行后面的代码（如果有的话）
+    pool.join()
+
+# 输出：
+# Synchronous result: 100
+# Asynchronous result: 100
+```
+
+本示例，异步调用不会阻塞主进程，但在 get() 方法调用时还是会等待任务完成。如果希望在等待结果的同时执行其他任务，可以在调用 get() 之前执行更多的代码。  
+
+**apply_async 与 apply 示例如下：**    
+
+`apply_async(func, args=(), kwargs={}, callback=None, error_callback=None)：`  
+
+```python
+import multiprocessing
+import time
+
+
+def func(msg):
+    print("msg:", msg)
+    time.sleep(3)
+    print("End Process")
+
+
+if __name__ == "__main__":
+    pool = multiprocessing.Pool(processes=3)
+    for i in range(4):
+        msg = f"Hello {i}"
+        pool.apply_async(func, (msg,))
+    print("Mark~ Mark~ Mark~~~~~~~~~~~~~~~~~~~~~~")
+    pool.close()
+    pool.join()
+    print("Sub-process(es) done.")
+# 输出：
+# Mark~ Mark~ Mark~~~~~~~~~~~~~~~~~~~~~~
+# msg: Hello 0
+# msg: Hello 1
+# msg: Hello 2
+# End Process
+# msg: Hello 3
+# End Process
+# End Process
+# End Process
+# Sub-process(es) done.
+```
+
+apply_async 函数允许你传递 callback 和 error_callback 参数。callback 参数用于指定任务成功完成后的回调函数，而 error_callback 参数用于处理任务执行过程中出现的异常。下面是一个使用 apply_async 的 callback 和 error_callback 参数的示例。
+
+```python
+import multiprocessing
+
+
+def safe_divide(x, y):
+    # 这个函数接收两个参数 x 和 y，并返回 x / y 的结果。如果 y 为 0，则抛出 ValueError 异常
+    if y == 0:
+        raise ValueError("Division by zero!")
+    return x / y
+
+
+def on_success(result):
+    # 当 apply_async 成功完成任务时，on_success 回调函数会被调用，并接收任务的结果作为参数
+    print(f'Success! Result: {result}')
+
+
+def on_error(e):
+    # 当 apply_async 在任务执行过程中遇到异常时，on_error 回调函数会被调用，并接收异常信息作为参数
+    print(f'Error: {e}')
+
+
+if __name__ == '__main__':
+    pool = multiprocessing.Pool(processes=4)
+
+    # 使用 apply_async 调用函数，传递成功回调和错误回调
+    pool.apply_async(safe_divide, args=(10, 2), callback=on_success,
+                     error_callback=on_error)  # 传递 (10, 2) 作为参数，任务成功后，on_success 会被调用
+    pool.apply_async(safe_divide, args=(10, 0), callback=on_success,
+                     error_callback=on_error)  # 传递 (10, 0) 作为参数，由于 y 为 0，safe_divide 函数会抛出异常，on_error 回调函数会被调用
+
+    pool.close()
+    pool.join()
+
+    print("Main process finished.")
+
+# 输出：
+# Success! Result: 5.0
+# Error: Division by zero!
+# Main process finished.
+```
+
+* `callback`：当任务成功完成时，callback 函数会被调用，并接收任务的返回值;
+* `error_callback`：当任务执行过程中出现异常时，error_callback 函数会被调用，并接收异常对象;
+
+`apply(func, args=(), kwargs={})：`  
+
+```python
+import multiprocessing
+import time
+
+
+def func(msg):
+    print("Msg：", msg)
+    time.sleep(3)
+    print("End Process")
+
+
+if __name__ == "__main__":
+    pool = multiprocessing.Pool(processes=3)
+    for i in range(4):
+        msg = f"Hello, {i}"
+        # #维持执行的进程总数为processes，当一个进程执行完毕后会添加新的进程进去
+        pool.apply(func, (msg,))
+    print("Mark~ Mark~ Mark~~~~~~~~~~~~~~~~~~~~~~")
+    pool.close()
+    pool.join()  # 调用join之前，先调用close函数，否则会出错。执行完close后不会有新的进程加入到pool,join函数等待所有子进程结束
+    print("Sub-process(es) done.")
+
+# 输出：
+# Msg： Hello, 0
+# End Process
+# Msg： Hello, 1
+# End Process
+# Msg： Hello, 2
+# End Process
+# Msg： Hello, 3
+# End Process
+# Mark~ Mark~ Mark~~~~~~~~~~~~~~~~~~~~~~
+# Sub-process(es) done.
+```
+
+**总结：**  
+* 同步调用：主进程在 apply 方法上会阻塞，直到任务完成，适用于不需要并行的简单任务；
+* 异步调用：主进程不会在 apply_async 方法上阻塞，而是继续执行后续代码，适用于需要并行处理的复杂任务；
+
+#### 20.1.2.2 map & map_async
+
+* `map(func, iterable, chunksize=None)`：同步调用，将 iterable 中的每一个元素作为参数，依次传递给函数 func，以并行的方式计算，并返回结果列表。map 是阻塞的，即主进程会等待所有子进程完成。
+  * func：要应用到每个元素的函数；
+  * iterable：要迭代的对象，每个元素都会作为参数传递给 func；
+  * chunksize（可选）：将 iterable 切分为更小的块来分发给进程池中的进程，有助于优化性能；
+* `map_async(func, iterable, chunksize=None, callback=None, error_callback=None)`：map 的异步版本。立即返回 ApplyResult 对象，结果可以通过 get() 获取。
+  * func：要应用到每个元素的函数；
+  * iterable：要迭代的对象；
+  * chunksize（可选）：将 iterable 切分为更小的块；
+  * callback（可选）：任务完成时的回调函数，该函数接受一个包含结果的列表作为参数；
+  * error_callback（可选）：任务失败时的回调函数，该函数接受一个异常对象作为参数；
+
+**示例代码：**  
+
+```python
+import multiprocessing
+import time
+
+
+def square(param):
+    time.sleep(3)
+    print(f"My name is: {param['name']}")
+    return param['mark'] * param['mark']
+
+
+if __name__ == "__main__":
+    pool = multiprocessing.Pool(processes=3)
+    # 使用 map：同步调用，将 square 函数应用到列表 [{"name":"Stars","mark":1},{"name":"Active","mark":2},{"name":"Absurd","mark":3},{"name":"Fairy","mark":4}] 上
+    results = pool.map(square,
+                       [{"name": "Stars", "mark": 1},
+                        {"name": "Active", "mark": 2},
+                        {"name": "Absurd", "mark": 3},
+                        {"name": "Fairy", "mark": 4}])
+    print(f'Synchronous map result: {results}')  # 输出: [1, 4, 9, 16]
+
+    # 使用 map_async：异步调用
+    async_results = pool.map_async(square, [{"name": "Stars", "mark": 1},
+                                            {"name": "Active", "mark": 2},
+                                            {"name": "Absurd", "mark": 3},
+                                            {"name": "Fairy", "mark": 4}])
+    print(f'Asynchronous map result: {async_results.get()}')  # 输出: [1, 4, 9, 16]
+    pool.close()
+    pool.join()
+
+# 输出：
+# My name is: Stars
+# My name is: Active
+# My name is: Absurd
+# My name is: Fairy
+# Synchronous map result: [1, 4, 9, 16]
+# My name is: Stars
+# My name is: Active
+# My name is: Absurd
+# My name is: Fairy
+# Asynchronous map result: [1, 4, 9, 16]
+```
+
+* `map`：同步调用，square 函数接受参数 [{"name":"Stars","mark":1},{"name":"Active","mark":2},{"name":"Absurd","mark":3},{"name":"Fairy","mark":4}]，返回 [1, 4, 9, 16]；
+* `map_async`：异步调用，结果同样是 [1, 4, 9, 16]，但可以通过 get() 方法获取结果；
+
+map_async 的 callback 参数允许你指定一个回调函数，该函数会在所有异步任务完成后自动调用，并且会接收到任务的结果列表作为参数。下面是一个使用 map_async 的回调函数的示例。
+
+```python
+import multiprocessing
+import time
+
+
+def square(x):
+    # 模拟一个耗时操作
+    time.sleep(3)
+    return x * x
+
+
+def collect_result(result):
+    # 回调函数
+    # 当 map_async 的所有任务完成后，collect_result 函数会自动被调用，并接收 map_async 的结果作为参数
+    print(f"Results collected: {result}")
+
+
+if __name__ == "__main__":
+    pool = multiprocessing.Pool(processes=3)
+    # 异步调用 map_async，传递回调函数 collect_result,当所有任务完成时，collect_result 回调函数会被调用，并打印出所有结果
+    async_results = pool.map_async(square, [1, 2, 3, 4], callback=collect_result)
+    # 在这里可以做其他的事情, 因为 map_async 是异步的，这个 print 可能在 collect_result 之前或之后执行
+    print("Doing other work while waiting for results...")
+    # 等待所有的子进程完成
+    pool.close()
+    pool.join()
+    print("Main process finished.")
+
+# 由于 map_async 是异步调用，print("Doing other work while waiting for results...") 可能会在回调函数执行前打印，说明主进程并不会因为等待 map_async 的结果而被阻塞。
+# 例如，注释 square 函数: time.sleep(3), time.sleep(3) 添加到 async_results = pool.map_async() 之后，模拟主进程处理其他任务
+# 输出：
+# Doing other work while waiting for results...
+# Results collected: [1, 4, 9, 16]
+# Main process finished.
+```
+
+#### 20.1.2.3 starmap & starmap_async
+
+* `starmap(func, iterable, chunksize=None)`：同步调用,类似于 map，但 iterable 中的元素是元组，它们会被拆包并作为多个参数传递给函数 func;
+* `starmap_async(func, iterable, chunksize=None, callback=None, error_callback=None)`：starmap 的异步版本。返回 ApplyResult 对象，结果可以通过 get() 方法获取;
+
+**starmap 示例**  
+
+`starmap` 是同步的，阻塞主进程直到所有任务完成，它将每个参数元组解包，然后传递给目标函数。
+
+```python
+import multiprocessing
+
+
+def add(x, y):
+    return x + y
+
+
+if __name__ == "__main__":
+    pool = multiprocessing.Pool(processes=3)
+    # starmap 将参数元组列表 (1, 2)、(3, 4) 和 (5, 6) 传递给 add 函数，返回 [3, 7, 11]
+    results = pool.starmap(add, [(1, 2), (3, 4), (5, 6)])
+    pool.close()
+    pool.join()
+    print(f'Synchronous starmap results: {results}')  # 输出：Synchronous starmap results: [3, 7, 11]
+```
+
+**starmap_async 示例**  
+```python
+import multiprocessing
+
+
+def safe_divide(x, y):
+    # 尝试除法运算，并在除数为零时抛出 ValueError
+    if y == 0:
+        raise ValueError("Division by zero!")
+    return x / y
+
+
+def on_success(results):
+    # 当所有任务都成功完成时，这个回调函数会被调用，接收结果列表
+    print(f'Success! Results: {results}')
+
+
+def on_error(e):
+    # 当任何任务发生异常时，错误回调函数会被调用，并接收异常对象
+    print(f'Error: {e}')
+
+
+if __name__ == '__main__':
+    pool = multiprocessing.Pool(processes=4)
+
+    # 使用 starmap_async 将参数元组 (10, 2)、(8, 4)、(5, 0) 和 (7, 1) 异步传递给 safe_divide 函数
+    async_result = pool.starmap_async(safe_divide, [(10, 2), (8, 4), (5, 0), (7, 1)],
+                                      callback=on_success,
+                                      error_callback=on_error)
+
+    pool.close()
+    pool.join()
+
+    print("Main process finished.")
+
+# 输出：
+# Error: Division by zero!
+# Main process finished.
+```
+
+【重要提示】：callback 仅在所有任务成功完成时才会调用，而 error_callback 在任一任务失败时触发。因此，不能同时期望 callback 和 error_callback 在同一批任务中都被调用。
 
 ### 20.2 线程 (Thread)
 
