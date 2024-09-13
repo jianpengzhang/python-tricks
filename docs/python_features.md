@@ -5017,6 +5017,8 @@ if __name__ == '__main__':
 
 在 Python 3 中，multiprocessing 模块提供了丰富的 API 来进行进程管理和进程间通信。以下是常用的进程使用用例，包括进程池 (Pool)、子进程 (Process) 以及进程间通信 (Queue, Pipe, Manager)。
 
+官方 3.12.6：[https://docs.python.org/zh-cn/3/library/multiprocessing.html](https://docs.python.org/zh-cn/3/library/multiprocessing.html)
+
 #### 20.1.1 子进程 (Process)
 
 在 Python 中，当你运行一个脚本时，该脚本的执行进程就是所谓的“主进程”。当主进程使用 multiprocessing 模块创建子进程时，子进程会作为主进程的子进程运行。这种父子关系意味着主进程负责管理和控制子进程的生命周期。
@@ -5146,60 +5148,6 @@ if __name__ == '__main__':
 ```
 
 以下通过示例分别介绍 Pool 多种分发任务方式。
-
-#### 20.1.3 进程间通信（Inter-Process Communication, IPC）
-
-进程间通信（Inter-Process Communication, IPC）是指不同进程之间交换数据的机制。在 Python 的 multiprocessing 模块中，常用的 IPC 方式包括 Queue、Pipe 和 Manager，它们可以帮助不同进程之间安全、有效地传递数据。下面详细介绍它们的使用和特点。
-
-#### 20.1.3.1 队列 (Queue)
-
-Queue 是一种线程和进程安全的队列，用于在线程和进程之间传递数据。它基于先进先出（FIFO）的原则工作，支持多个生产者和多个消费者。
-在进程模式下，Python 提供了 multiprocessing.Queue，它是通过底层的管道（Pipe）和锁（Lock）机制实现的安全队列，可以在不同的进程间传递数据。
-
-**特点：**  
-* 线程（queue.Queue，下文介绍线程在展开说明）和进程（multiprocessing.Queue）安全：Queue 是线程和进程安全的，支持多生产者和多消费者模式；
-* 阻塞与非阻塞操作：Queue 的 get() 和 put() 方法可以设置为阻塞或非阻塞模式；
-* 容量限制：可以设置 Queue 的最大容量，默认无限制；
-
-**示例：**  
-
-```python
-# 进程间通信
-import multiprocessing
-
-
-def producer(queue):
-    for item in range(5):
-        print(f'Producing {item}')
-        queue.put(item)
-
-
-def consumer(queue):
-    while True:
-        item = queue.get()
-        if item is None:  # Sentinel to stop the process
-            break
-        print(f'Consuming {item}')
-
-
-if __name__ == '__main__':
-    queue = multiprocessing.Queue()
-
-    # 创建生产者和消费者进程
-    producer_process = multiprocessing.Process(target=producer, args=(queue,))
-    consumer_process = multiprocessing.Process(target=consumer, args=(queue,))
-
-    producer_process.start()
-    consumer_process.start()
-
-    producer_process.join()
-
-    # 向队列发送 None 作为结束信号
-    queue.put(None)
-
-    consumer_process.join()
-```
-
 
 #### 20.1.2.1 apply & apply_async  
 
@@ -5566,6 +5514,140 @@ if __name__ == '__main__':
 
 回调函数：
 * 异步方法可以接受 callback 和 error_callback，处理任务成功或失败后的操作；
+
+#### 20.1.3 进程间通信（Inter-Process Communication, IPC）
+
+进程间通信（Inter-Process Communication, IPC）是指不同进程之间交换数据的机制。在 Python 的 multiprocessing 模块中，常用的 IPC 方式包括 Queue、Pipe 和 Manager，它们可以帮助不同进程之间安全、有效地传递数据。下面详细介绍它们的使用和特点。
+
+#### 20.1.3.1 队列 (Queue)
+
+Queue 是一种线程和进程安全的队列，用于在线程和进程之间传递数据。它基于先进先出（FIFO）的原则工作，支持多个生产者和多个消费者。
+在进程模式下，Python 提供了 multiprocessing.Queue，它是通过底层的管道（Pipe）和锁（Lock）机制实现的安全队列，可以在不同的进程间传递数据。
+
+**特点：**
+* 线程（queue.Queue，下文介绍线程在展开说明）和进程（multiprocessing.Queue）安全：Queue 是线程和进程安全的，支持多生产者和多消费者模式；
+* 阻塞与非阻塞操作：Queue 的 get() 和 put() 方法可以设置为阻塞或非阻塞模式；
+* 容量限制：可以设置 Queue 的最大容量，默认无限制；
+
+**示例：**
+
+```python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2020 EasyOMS Inc. All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+"""
+@Time:2024/9/14 00:10
+@Author:'jpzhang.ht@gmail.com'
+@Site:'https://jianpengzhang.github.io/'
+@Describe:
+"""
+
+from multiprocessing import Process, Queue
+import time
+
+# 定义一个函数，向队列中添加数据
+def producer(queue):
+    for i in range(5):
+        item = f'Item {i}'
+        print(f'生产者正在生产: {item}')
+        queue.put(item)  # 将数据放入队列
+        time.sleep(1)  # 模拟生产过程中的延迟
+
+# 定义一个函数，从队列中取出数据
+def consumer(queue):
+    while True:
+        item = queue.get()  # 从队列中获取数据
+        if item is None:
+            break  # 如果获取到 None，则退出循环
+        print(f'消费者正在消费: {item}')
+        time.sleep(2)  # 模拟消费过程中的延迟
+
+if __name__ == '__main__':
+    # 创建一个进程间通信的队列
+    queue = Queue()
+
+    # 创建生产者进程
+    producer_process = Process(target=producer, args=(queue,))
+
+    # 创建消费者进程
+    consumer_process = Process(target=consumer, args=(queue,))
+
+    # 启动进程
+    producer_process.start()
+    consumer_process.start()
+
+    # 等待生产者进程结束
+    producer_process.join()
+
+    # 生产结束后向队列中放入 None，用于通知消费者结束
+    queue.put(None)
+
+    # 等待消费者进程结束
+    consumer_process.join()
+
+    print('生产和消费过程完成。')
+```
+
+**代码说明：**  
+* Queue 初始化:
+    ```python
+    queue = Queue()
+    ```
+    Queue() 创建了一个共享的队列，可以在多个进程间传递数据。
+
+* 生产者函数 producer:
+    ```python
+    def producer(queue):
+        for i in range(5):
+            item = f'Item {i}'
+            print(f'生产者正在生产: {item}')
+            queue.put(item)
+            time.sleep(1)
+    ```
+    该函数向队列中添加 5 个项目。每生产一个项目，程序会暂停 1 秒，以模拟生产过程中的延迟。
+
+* 消费者函数 consumer:
+    ```python
+    def consumer(queue):
+        while True:
+            item = queue.get()
+            if item is None:
+                break
+            print(f'消费者正在消费: {item}')
+            time.sleep(2)
+    ```
+    该函数不断从队列中读取数据，并消费数据。读取数据后，程序暂停 2 秒以模拟消费过程中的延迟。如果读取到 None，则退出循环。
+
+* 进程启动和同步:
+    ```python
+    producer_process.start()
+    consumer_process.start()
+    
+    producer_process.join()
+    queue.put(None)
+    consumer_process.join()
+    ```
+  * start() 用于启动进程;
+  * join() 等待进程完成;
+  * queue.put(None) 传递一个 None 值，告诉消费者数据已经全部处理完毕，可以停止消费;
+  * 若 `consumer_process.join()` 放置在 `queue.put(None)` 之前则消费者进程（consumer_process）一直不会结束，一直在等待进程完成（进程完成需要队列中获取 None）。
+
+* 输出: 运行该代码时，生产者和消费者进程会并行工作，生产者生成的数据会被消费者消耗，直到所有数据都处理完毕。
+* 其他说明
+  * 线程安全：multiprocessing.Queue 是线程和进程安全的，意味着在多线程或多进程环境下使用时，不需要额外的同步机制；
+  * 数据序列化：Queue 会自动序列化和反序列化数据，所以可以传递任何可以被 pickle 模块序列化的数据类型；
 
 ### 20.2 线程 (Thread)
 
