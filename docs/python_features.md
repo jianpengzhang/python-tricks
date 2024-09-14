@@ -5532,37 +5532,15 @@ Queue 是一种线程和进程安全的队列，用于在线程和进程之间�
 **示例：**
 
 ```python
-# -*- coding: utf-8 -*-
-#
-# Copyright © 2020 EasyOMS Inc. All Rights Reserved.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-"""
-@Time:2024/9/14 00:10
-@Author:'jpzhang.ht@gmail.com'
-@Site:'https://jianpengzhang.github.io/'
-@Describe:
-"""
-
 from multiprocessing import Process, Queue
 import time
 
 # 定义一个函数，向队列中添加数据
 def producer(queue):
-    for i in range(5):
+    for i in range(10):
         item = f'Item {i}'
         print(f'生产者正在生产: {item}')
-        queue.put(item)  # 将数据放入队列
+        queue.put(item)  # 将数据放入队列, 如果队列已满，将阻塞
         time.sleep(1)  # 模拟生产过程中的延迟
 
 # 定义一个函数，从队列中取出数据
@@ -5575,8 +5553,8 @@ def consumer(queue):
         time.sleep(2)  # 模拟消费过程中的延迟
 
 if __name__ == '__main__':
-    # 创建一个进程间通信的队列
-    queue = Queue()
+    # 创建一个进程间通信且最大长度为 3 的队列
+    queue = Queue(maxsize=3)
 
     # 创建生产者进程
     producer_process = Process(target=producer, args=(queue,))
@@ -5586,6 +5564,8 @@ if __name__ == '__main__':
 
     # 启动进程
     producer_process.start()
+    # 等待生产者产生数据，模拟队列阻塞
+    time.sleep(5)
     consumer_process.start()
 
     # 等待生产者进程结束
@@ -5600,7 +5580,7 @@ if __name__ == '__main__':
     print('生产和消费过程完成。')
 ```
 
-**代码说明：**  
+#### 1). 代码说明  
 * Queue 初始化:
     ```python
     queue = Queue()
@@ -5648,6 +5628,162 @@ if __name__ == '__main__':
 * 其他说明
   * 线程安全：multiprocessing.Queue 是线程和进程安全的，意味着在多线程或多进程环境下使用时，不需要额外的同步机制；
   * 数据序列化：Queue 会自动序列化和反序列化数据，所以可以传递任何可以被 pickle 模块序列化的数据类型；
+
+#### 2). 参数及方法说明  
+* `multiprocessing.Queue(maxsize)`（设置队列长度）  
+通过 multiprocessing.Queue(maxsize) 可以设置队列的最大长度。这个参数限制了队列中能存放的最大项数，防止队列无限制地增长导致内存耗尽。  
+  * `maxsize`: 用于指定队列的最大长度。默认值为 0，表示队列大小不受限制，允许存储无限数量的数据。当队列达到 maxsize 时，put() 操作将阻塞，直到队列有空间。  
+
+* `put(item, block=True, timeout=None)`  
+`put()` 方法将数据放入队列中。它支持阻塞模式，意味着如果队列已满，则可以等待直到队列有空余空间。
+  * 参数：  
+    * `item`: 需要放入队列的数据;
+    * `block（默认值为 True）`：如果设置为 True，当队列已满时，该方法会阻塞，直到有空闲空间。如果为 False，则在队列满时会立即抛出 queue.Full 异常;
+    * `timeout（可选）`：等待队列有空闲空间的时间。如果超过这个时间还没有空闲空间，会抛出 queue.Full 异常;
+  * 用法：
+    ```python
+    queue.put("Hello, world!", block=True, timeout=None)
+    ```
+  * 示例：
+    ```python
+    import multiprocessing
+    import time
+    
+    def producer(queue):
+        # 往队列产生5条数据
+        for i in range(5):
+            item = f"Putting item {i} in queue"
+            print(item)
+            # queue.put(item)
+            # 队列阻塞，抛出 queue.Full 异常
+            queue.put(item, block=False)
+            # 模拟任务耗时
+            time.sleep(1)
+
+    if __name__ == "__main__":
+        # 创建一个长度为 3 的队列
+        q = multiprocessing.Queue(maxsize=3)
+        p = multiprocessing.Process(target=producer, args=(q,))
+        p.start()  # 启动子进程，子进程开始在后台运行
+        p.join()  # 等待子进程结束
+    
+    # 输出：
+    # Putting item 0 in queue
+    # Putting item 1 in queue
+    # Putting item 2 in queue
+    # Putting item 3 in queue
+    # Process Process-1:
+    # Traceback (most recent call last):
+    #   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    #     self.run()
+    #   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    #     self._target(*self._args, **self._kwargs)
+    #   File "/home/bolean/workspace/examples/python-tricks/src/process_queue_demo20_04.py", line 61, in producer
+    #     queue.put(item, block=False)
+    #   File "/usr/lib/python3.12/multiprocessing/queues.py", line 90, in put
+    #     raise Full
+    # queue.Full
+    ```
+
+    队列阻塞，抛出 queue.Full 异常。
+
+* `get(block=True, timeout=None)`  
+`get()` 方法从队列中取出数据。如果队列为空时，它可以阻塞进程，直到有数据可取。
+  * 参数：  
+    * `block（默认值为 True）`：如果设置为 True，当队列为空时，该方法会阻塞，直到有数据可获取。如果设置为 False，队列为空时会立即抛出 queue.Empty 异常；
+    * `timeout（可选）`：阻塞等待的最大时间。如果超过此时间仍然无法获取到数据，会抛出 queue.Empty 异常；
+  * 用法：  
+    ```python
+    item = queue.get()  # 阻塞模式，等待直到队列中有数据
+    ```
+  * 示例：
+    ```python
+    import multiprocessing
+    import time
+    
+    
+    def consumer(queue):
+        while True:
+            # item = queue.get()
+            item = queue.get(block=False)  # 设置为 False，队列为空时会立即抛出 queue.Empty 异常
+            if item is None:  # 当获取到 None 时，停止循环
+                break
+            print(f"Got item: {item}")
+            # time.sleep(2)
+    
+    
+    if __name__ == "__main__":
+        q = multiprocessing.Queue(maxsize=3)
+        p = multiprocessing.Process(target=consumer, args=(q,))
+        p.start()
+        for i in range(5):
+            q.put(i)
+            time.sleep(2)  # 模拟队列为空情况
+        q.put(None)  # 向队列发送结束信号
+        p.join()
+    
+    # 输出：
+    # Got item: 0
+    # Process Process-1:
+    # Traceback (most recent call last):
+    #   File "/usr/lib/python3.12/multiprocessing/process.py", line 314, in _bootstrap
+    #     self.run()
+    #   File "/usr/lib/python3.12/multiprocessing/process.py", line 108, in run
+    #     self._target(*self._args, **self._kwargs)
+    #   File "/home/bolean/workspace/examples/python-tricks/src/process_queue_demo20_04.py", line 99, in consumer
+    #     item = queue.get(block=False)  # 设置为 False，队列为空时会立即抛出 queue.Empty 异常
+    #            ^^^^^^^^^^^^^^^^^^^^^^
+    #   File "/usr/lib/python3.12/multiprocessing/queues.py", line 116, in get
+    #     raise Empty
+    # _queue.Empty
+    ```
+    队列为空，抛出 queue.Empty 异常。
+  
+* `empty()`  
+`empty()` 方法，如果队列为空返回 True ，否则返回 False。需要注意的是，在多进程环境下，由于进程间的竞争，该方法的结果可能不完全可靠。
+  ```python
+  if queue.empty():
+      print("队列为空")
+  ```
+  
+* `full()`  
+`full()` 方法，如果队列已满返回 True ，否则返回 False。与 empty() 类似，在多进程环境下，这个方法的结果也可能不是完全可靠的。
+  ```python
+  if queue.full():
+      print("Queue is full")
+  ```
+
+* `qsize()`  
+`qsize()` 返回队列中当前未被获取(即 消费 `.get()`)的数据项的数量。这个方法在 Unix 系统中可以正常使用，但在 Windows 上通常不可用（会抛出 NotImplementedError）。
+
+  ```python
+  import multiprocessing
+
+
+  def producer(queue):
+      for i in range(5):
+          queue.put(i)
+          print(f"Queue size: {queue.qsize()}")
+  
+  
+  if __name__ == "__main__":
+      q = multiprocessing.Queue(maxsize=3)
+      p = multiprocessing.Process(target=producer, args=(q,))
+      p.start()
+      p.join()
+  
+  # 输出：
+  # Queue size: 1
+  # Queue size: 2
+  # Queue size: 3
+  ```
+
+* `close()`  
+用于关闭队列，不会影响已经在队列中的数据的处理。close() 的作用是防止再向队列中添加新的数据，但队列中已经存在的数据依然可以被读取和处理。
+  * 关闭队列的作用：当调用 Queue.close() 后，队列将不允许再向其中添加新的数据（即不能再调用 put() 方法）。这个动作相当于通知队列 "不要再接受新任务"；
+  * 对已提交数据的处理：close() 并不会清空或影响已经在队列中的数据，这些数据依然会按照正常流程被消费者进程读取（通过 get() 方法）并处理。因此，队列关闭后，所有已提交的数据仍可以被继续处理直至队列为空；
+  * 与 join() 配合：在关闭队列后，通常会使用 join() 方法来确保所有已提交的数据都被正确处理。join() 会等待队列中的所有数据都被处理完，之后程序才会继续执行；
+
 
 ### 20.2 线程 (Thread)
 
