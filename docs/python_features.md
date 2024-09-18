@@ -5745,7 +5745,8 @@ if __name__ == '__main__':
   if queue.empty():
       print("队列为空")
   ```
-  
+  见 full() 示例。
+
 * `full()`  
 `full()` 方法，如果队列已满返回 True ，否则返回 False。与 empty() 类似，在多进程环境下，这个方法的结果也可能不是完全可靠的。
   ```python
@@ -5753,6 +5754,114 @@ if __name__ == '__main__':
       print("Queue is full")
   ```
 
+  示例：
+  ```python
+  import multiprocessing
+  import time
+  
+  def producer(queue):
+      for i in range(5):
+          if queue.empty():
+              print("队列为空！")
+          if queue.full():
+              print("队列已满！")
+          print(i)
+          queue.put(i)
+          # time.sleep(2)
+  
+  if __name__ == "__main__":
+      q = multiprocessing.Queue(maxsize=3)
+      p = multiprocessing.Process(target=producer, args=(q,))
+      p.start()
+      p.join()
+  
+  # 输出：
+  # 队列为空！
+  # 0
+  # 队列为空！
+  # 1
+  # 2
+  # 队列已满！
+  # 3
+  
+  # time.sleep(2)
+  # 暂停，则程序正常输出：
+  # 队列为空！
+  # 0
+  # 1
+  # 2
+  # 队列已满！
+  # 3
+  ```
+  这里为什么会输出 2 次“队列为空！”？（注，环境差异，输出或有不同）  
+  * 初始队列为空： 当 producer 函数刚开始运行时，队列是空的，因此第一次调用 queue.empty() 时，输出“队列为空！”;  
+  * 队列为空的并发条件： 虽然在循环中不断向队列中添加元素，但 queue.empty() 是基于队列的当前状态检查是否为空。当调用 queue.empty() 时，如果这时 CPU 正好切换到另一个线程，导致元素还未真正放入队列，可能会再次检查到队列为空。因此有可能出现第二次输出“队列为空！”的情况;  
+
+  #### 【扩展知识点】：queue.empty() 和 queue.full() 非可靠性
+  * `multiprocessing.Queue` 的工作原理  
+     multiprocessing.Queue 是一个进程安全的队列，它支持在多个进程间安全地传递数据。通过 put() 方法往队列中插入元素，通过 get() 方法从队列中读取元素。队列是有状态的——它可能是空的，也可能是满的。  
+     但是，调用 queue.empty() 和 queue.full() 检查队列的状态时，它们并不一定是瞬时精确的，特别是在多进程环境下。这是因为进程调度器的运行时行为可能影响队列状态与执行流的同步。
+  * 多进程环境中的竞争条件  
+    多进程中的竞争条件是指，多个进程对共享资源（如队列）进行读写操作时，可能发生时间竞争，导致状态检查与实际操作不同步。
+    <br/>
+    例如，在上述代码中，队列初始是空的，producer 函数在向队列中 put() 数据之前，先检查队列是否为空。如果队列为空，则输出 "队列为空"。
+    <br/>
+    然而，由于 queue.empty() 检查队列的时间与队列实际写入数据之间存在时间差（微秒级），这时可能发生以下情况：  
+    * 第一次检查：队列刚创建时确实是空的，因此在第一次 queue.empty() 调用时，返回 True，并输出 "队列为空！"；
+    * 队列写入的时机：接下来，程序通过 queue.put(i) 将数据放入队列。然而，在向队列写入数据时，CPU 会对两个操作进行调度（检查队列是否为空与向队列写入数据）。操作顺序未必是严格按代码执行顺序完成的——例如，即便 queue.put() 已经被调用，数据可能还未完全写入队列，而是处于处理中或在系统缓冲区。这种情况是操作系统调度器或底层系统资源的延迟。
+    * 第二次检查：在队列还未真正放入数据之前，再次调用 queue.empty() 时，队列可能仍然报告为空。尤其是在没有任何同步机制（如锁或条件变量）来确保这些操作的顺序时，这种现象更容易发生；
+  * `queue.empty()` 和 `queue.full()` 的局限性   
+    根据 Python 文档，queue.empty() 和 queue.full() 并不是绝对可靠的检查函数，尤其在多进程或多线程环境中。这是因为这些方法仅仅是对队列状态的一个瞬时检查，而队列状态在检查后的时刻可能已经被另一个进程修改了。
+    两次“队列为空”的输出，很可能是因为以下两点：  
+    * 首次调用：在 put() 之前，队列确实为空；  
+    * 第二次调用：尽管在逻辑上应该向队列写入了数据，但由于多进程的调度机制或者 put() 操作的延迟，队列状态仍然被认为是空的（即使可能已经在写入数据的过程中）；
+  * 操作系统调度与 CPU 资源竞争  
+    在多进程环境中，操作系统调度器负责分配 CPU 时间给不同的进程。如果两个进程之间存在资源竞争（如共享队列），系统可能会在某个关键操作（如 put() 或 empty() 检查）之前或之后切换到其他进程；  
+    因此，程序的执行顺序可能不是你想象中的严格按照代码顺序执行的，而是受到系统调度器的影响；
+  * 如何避免这种情况？
+    要避免这种竞争条件，可以使用如下方式：  
+    * 锁：使用 multiprocessing.Lock 来保证在一个进程修改队列时，其他进程不能同时访问队列;
+    * 条件变量：使用 multiprocessing.Condition 来实现更复杂的同步机制，确保队列的状态检查和更新保持一致;
+    * 信号量：使用 multiprocessing.Semaphore 来控制对共享资源的访问，确保某一时刻只有固定数量的进程可以操作队列;
+  * 调整后的代码示例  
+    尝试添加锁来同步操作，确保队列的状态检查和写入操作不会出现竞争条件。
+  
+    ```python
+    import multiprocessing
+    import time
+    
+    
+    def producer(queue, lock):
+        for i in range(5):
+            with lock:
+                if queue.empty():
+                    print("队列为空！")
+                if queue.full():
+                    print("队列已满！")
+                queue.put(i)
+                print(f"放入 {i} 到队列")
+                time.sleep(0.1)  # 模拟一些延迟
+  
+  
+    if __name__ == "__main__":
+        lock = multiprocessing.Lock()
+        q = multiprocessing.Queue(maxsize=3)
+        p = multiprocessing.Process(target=producer, args=(q, lock))
+        p.start()
+        p.join()
+    # 输出：
+    # 队列为空！
+    # 放入 0 到队列
+    # 放入 1 到队列
+    # 放入 2 到队列
+    # 队列已满！
+    ```
+    在这个例子中，`with lock:` 确保了每次对队列的检查和修改都是同步进行的，从而避免竞争条件。这种方式可以确保程序按照预期行为执行，不会输出两次“队列为空！”。  
+    **小结：**  
+    * queue.empty() 和 queue.full() 的非可靠性：多进程环境中，队列状态检查不是瞬时精确的。
+    * 多进程调度和资源竞争：多进程程序的执行顺序并不严格按照代码顺序执行，系统调度器和资源竞争可能导致队列状态不一致。
+    * 避免竞争条件：可以通过使用锁或条件变量等同步机制，确保对队列的操作顺序正确。
+  
 * `qsize()`  
 `qsize()` 返回队列中当前未被获取(即 消费 `.get()`)的数据项的数量。这个方法在 Unix 系统中可以正常使用，但在 Windows 上通常不可用（会抛出 NotImplementedError）。
 
@@ -5778,13 +5887,227 @@ if __name__ == '__main__':
   # Queue size: 3
   ```
 
-* `close()`  
-用于关闭队列，不会影响已经在队列中的数据的处理。close() 的作用是防止再向队列中添加新的数据，但队列中已经存在的数据依然可以被读取和处理。
+* `close()`
+  用于关闭队列，不会影响已经在队列中的数据处理。close() 的作用是防止再向队列中添加新的数据，但队列中已经存在的数据依然可以被读取和处理。
   * 关闭队列的作用：当调用 Queue.close() 后，队列将不允许再向其中添加新的数据（即不能再调用 put() 方法）。这个动作相当于通知队列 "不要再接受新任务"；
   * 对已提交数据的处理：close() 并不会清空或影响已经在队列中的数据，这些数据依然会按照正常流程被消费者进程读取（通过 get() 方法）并处理。因此，队列关闭后，所有已提交的数据仍可以被继续处理直至队列为空；
   * 与 join() 配合：在关闭队列后，通常会使用 join() 方法来确保所有已提交的数据都被正确处理。join() 会等待队列中的所有数据都被处理完，之后程序才会继续执行；
 
+  **示例：**
 
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(queue):
+      while True:
+          data = queue.get()
+          if data is None:  # 检测到 None 作为结束信号，退出循环
+              break
+          print(f"Processed data: {data}")
+          time.sleep(1)  # 模拟处理时间
+  
+  
+  if __name__ == "__main__":
+      queue = multiprocessing.Queue()
+  
+      # 启动一个消费者进程
+      process = multiprocessing.Process(target=worker, args=(queue,))
+      process.start()
+  
+      # 向队列中放入数据
+      for i in range(5):
+          queue.put(i)
+  
+      # 将所有数据（包括 None 结束信号）放入队列，然后再调用 queue.close()，确保不会因关闭队列而无法放入数据。
+      queue.put(None)
+  
+      # 关闭队列底层的通信管道
+      queue.close()
+  
+      # 该位置放入结束信号无效，队列不允许再向其中添加新的数据，导致 process 进程一直等待结束信号，主进程未继续往下执行打印：“All tasks processed.”
+      # queue.put(None)
+  
+      # 等待消费者进程处理完所有数据
+      process.join()
+  
+      print("All tasks processed.")
+  
+  # 输出：
+  # Processed data: 0
+  # Processed data: 1
+  # Processed data: 2
+  # Processed data: 3
+  # Processed data: 4
+  # All tasks processed.
+  ```
+  假设 `queue.put(None)` 代码下移至 `queue.close()` 之后，则抛出：ValueError: Queue is closed 异常，消费者进程收不到 queue.put(None) 的结束信号，进程阻塞。  
+  * 为什么不能在 queue.close() 之后调用 queue.put()？
+    * queue.put() 是用来将数据放入队列的操作；
+    * queue.close() 是关闭队列底层通信管道的操作。一旦队列关闭，任何尝试往队列中放数据的操作都会抛出 ValueError: Queue is closed 异常；
+  * 子进程未退出的原因：
+    * 子进程在 worker 函数中一直等待从队列中获取数据。如果没有收到 None 作为结束信号，它会一直阻塞，等待新的数据；
+    * 当主进程调用 queue.close() 后再试图放入 None 时，抛出 ValueError，并且 None 没有成功放入队列，导致子进程永远等不到结束信号，进而阻塞；
+    * 如果需要当主进程被终止时，守护进程（子进程）也被终止，可以设置进程：multiprocessing.Process(target=worker, args=(queue,), daemon=True)，则主进程抛出 ValueError: Queue is closed 异常，相应的子进程自动被终止执行；
+
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(queue):
+      while True:
+          data = queue.get()
+          if data is None:  # 检测到 None 作为结束信号，退出循环
+              break
+          print(f"Processed data: {data}")
+          time.sleep(1)  # 模拟处理时间
+  
+  if __name__ == "__main__":
+      queue = multiprocessing.Queue()
+  
+      # 启动一个消费者进程
+      process = multiprocessing.Process(target=worker, args=(queue,))
+      process.start()
+  
+      # 向队列中放入数据
+      for i in range(5):
+          queue.put(i)
+  
+      queue.put(None)
+  
+      # 关闭队列底层的通信管道
+      queue.close()
+  
+      # 等待消费者进程处理完所有数据
+      process.join()
+  
+      print("All tasks processed.")
+  
+      queue.put("New")
+      process2 = multiprocessing.Process(target=worker, args=(queue,))
+      process2.start()
+      queue.put(None)
+      process2.join()
+  
+  # 输出：
+  # Processed data: 0
+  # Processed data: 1
+  # Processed data: 2
+  # Processed data: 3
+  # Processed data: 4
+  # Traceback (most recent call last):
+  #   File "/home/bolean/workspace/examples/python-tricks/src/process_queue_demo20_04.py", line 321, in <module>
+  #     queue.put("New")
+  #   File "/usr/lib/python3.12/multiprocessing/queues.py", line 88, in put
+  #     raise ValueError(f"Queue {self!r} is closed")
+  # ValueError: Queue <multiprocessing.queues.Queue object at 0x7fef3ca1bb00> is closed
+  # All tasks processed.
+  ```
+  注释 `queue.close()` 队列可接受新的数据，可由后面消费者进程处理。    
+  
+  #### 【扩展知识点】
+  * process.join()：这个方法会阻塞主进程，直到对应的子进程结束。当 join() 调用返回时，子进程已经终止;
+  * 如果你在调用 process.join() 之后再试图调用 queue.put() 放入数据，子进程（消费者）已经不再运行，因此这些数据无法被处理或接收;
+
+* `join_thread()` 和 `cancel_join_thread()`
+
+  * 1). `join_thread()`
+    * 功能：
+      join_thread() 用于等待队列的后台线程结束。在队列的生命周期中，Python 维护着一个后台线程来管理进程之间的数据通信。如果你调用了 queue.close()，你可以显式调用 join_thread() 来确保所有数据都已经通过队列的底层通信管道被发送出去，避免数据丢失。
+    * 适用场景：
+      * 当你需要确保进程在退出之前，所有排入队列的数据都已经被处理完（例如，传输至消费者进程）时，可以使用 join_thread();
+      * 适合用在你不希望丢失数据，确保所有任务都已经被完全处理的场景;
+    * 使用要求：
+      * 必须在 queue.close() 之后才能调用 join_thread()，否则会抛出异常;
+      * 这将阻塞调用它的进程，直到后台线程完成所有队列数据的处理并终止;
+    * 代码示例：
+      ```python
+        import multiprocessing
+        import time
+        
+        
+        def worker(queue):
+            while True:
+                data = queue.get()
+                if data is None:  # 检测到结束信号
+                    break
+                print(f"Processed: {data}")
+                time.sleep(1)
+        
+        
+        if __name__ == "__main__":
+            queue = multiprocessing.Queue()
+        
+            process = multiprocessing.Process(target=worker, args=(queue,))
+            process.start()
+        
+            # 放入数据
+            for i in range(5):
+                queue.put(i)
+        
+            # 放入 None 作为结束信号
+            queue.put(None)
+        
+            # 关闭队列并等待后台线程结束
+            queue.close()
+            queue.join_thread()  # 等待队列处理完所有数据
+        
+            # 等待子进程退出
+            process.join()
+            print("All tasks processed.")
+      ```
+  * 2). `cancel_join_thread()`
+    * 功能：
+      cancel_join_thread() 用于取消 join_thread() 的阻塞行为，防止进程在退出时等待后台线程结束。这意味着当你调用 cancel_join_thread() 后，主进程会立即退出，而不会等待队列中的数据被完全处理。
+    * 适用场景：
+      * 当你需要立即结束进程，而不关心队列中尚未处理的数据，或者不在乎数据丢失时，可以使用 cancel_join_thread()；
+      * 通常用于极少数的紧急情况下，比如当你希望程序在某些条件下快速终止时；
+    * 注意事项：
+      * 使用 cancel_join_thread() 可能导致队列中尚未发送的数据丢失，因为它会跳过等待数据完全写入底层管道的过程；
+      * 这个方法仅适用于你不关心数据丢失的情况，因此它在实际开发中不常见
+    * 代码示例：
+    ```python
+        import multiprocessing
+        import time
+        
+        def worker(queue):
+            while True:
+                data = queue.get()
+                if data is None:
+                    break
+                print(f"Processed: {data}")
+                time.sleep(1)
+        
+        if __name__ == "__main__":
+            queue = multiprocessing.Queue()
+        
+            process = multiprocessing.Process(target=worker, args=(queue,))
+            process.start()
+        
+            for i in range(5):
+                queue.put(i)
+        
+            queue.put(None)
+        
+            # 取消 join_thread，这意味着不等待队列处理完毕
+            queue.cancel_join_thread()
+        
+            # 关闭队列
+            queue.close()
+        
+            # 等待子进程退出
+            process.join()
+            print("All tasks processed.")
+    ````
+  * 3). 两者的区别
+    * join_thread():阻塞主进程，直到队列的后台线程处理完所有数据并退出。通常用于确保队列中的所有数据都被处理完毕，适合严谨的数据处理场景;
+    * cancel_join_thread():允许主进程直接退出，不会等待后台线程处理队列中的数据。适用于无需等待数据处理完成或不担心数据丢失的场景;
+  * 4). 重要性和使用建议
+    * 何时使用 join_thread():  
+      当你有多个进程使用 multiprocessing.Queue 进行通信时，通常需要确保在进程退出前所有数据都已被发送或接收，此时使用 join_thread() 是一种可靠的方式来确保数据完整性。
+    * 何时使用 cancel_join_thread():  
+      如果你需要在不等待后台线程的情况下立即退出进程，并且不担心队列中尚未处理的数据丢失，那么可以使用 cancel_join_thread()。但这种情况非常罕见，通常建议避免使用，除非你明确知道其影响。
 ### 20.2 线程 (Thread)
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
