@@ -6066,7 +6066,7 @@ if __name__ == '__main__':
     * 注意事项：
       * 使用 cancel_join_thread() 可能导致队列中尚未发送的数据丢失，因为它会跳过等待数据完全写入底层管道的过程；
       * 这个方法仅适用于你不关心数据丢失的情况，因此它在实际开发中不常见
-    * 代码示例：
+    * 代码示例：为了展示 cancel_join_thread() 导致数据丢失的场景，主进程将不会等待队列中的数据被完全处理，会在放入一部分数据后立即退出，剩余数据会丢失。
     ```python
         import multiprocessing
         import time
@@ -6075,31 +6075,49 @@ if __name__ == '__main__':
             while True:
                 data = queue.get()
                 if data is None:
+                    print("Received termination signal. Worker exiting.")
                     break
-                print(f"Processed: {data}")
-                time.sleep(1)
+                print(f"Worker processing: {data}")
+                time.sleep(1)  # 模拟数据处理的时间
         
         if __name__ == "__main__":
             queue = multiprocessing.Queue()
         
+            # 启动消费者进程
             process = multiprocessing.Process(target=worker, args=(queue,))
             process.start()
         
+            # 向队列中放入数据
             for i in range(5):
                 queue.put(i)
         
+            # 放入结束信号 None
             queue.put(None)
         
-            # 取消 join_thread，这意味着不等待队列处理完毕
+            # 调用 cancel_join_thread() 取消等待后台线程处理队列数据
             queue.cancel_join_thread()
         
             # 关闭队列
             queue.close()
         
-            # 等待子进程退出
-            process.join()
-            print("All tasks processed.")
+            # 模拟主进程提前退出
+            time.sleep(1)  # 让部分数据来得及处理，主进程快速退出
+        
+            process.terminate()  # 强制终止子进程
+        
+            print("Main process exiting early.")
+        
+        # 输出：
+        # Worker processing: 0
+        # Main process exiting early.
     ````
+    解释：  
+    * 在主进程中调用 cancel_join_thread() 后，主进程不再等待后台线程处理完所有数据，并在部分数据处理后强制终止子进程；
+    * 由于主进程提前退出，消费者进程只处理了部分数据，并未收到结束信号 None；
+    * 剩余数据未被处理，数据丢失；  
+    
+    通过强制终止子进程 (process.terminate())，可以更明显地展示 cancel_join_thread() 可能导致的数据丢失场景。
+    
   * 3). 两者的区别
     * join_thread():阻塞主进程，直到队列的后台线程处理完所有数据并退出。通常用于确保队列中的所有数据都被处理完毕，适合严谨的数据处理场景;
     * cancel_join_thread():允许主进程直接退出，不会等待后台线程处理队列中的数据。适用于无需等待数据处理完成或不担心数据丢失的场景;
@@ -6108,6 +6126,9 @@ if __name__ == '__main__':
       当你有多个进程使用 multiprocessing.Queue 进行通信时，通常需要确保在进程退出前所有数据都已被发送或接收，此时使用 join_thread() 是一种可靠的方式来确保数据完整性。
     * 何时使用 cancel_join_thread():  
       如果你需要在不等待后台线程的情况下立即退出进程，并且不担心队列中尚未处理的数据丢失，那么可以使用 cancel_join_thread()。但这种情况非常罕见，通常建议避免使用，除非你明确知道其影响。
+
+
+
 ### 20.2 线程 (Thread)
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
