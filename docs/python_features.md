@@ -6127,7 +6127,159 @@ if __name__ == '__main__':
     * 何时使用 cancel_join_thread():  
       如果你需要在不等待后台线程的情况下立即退出进程，并且不担心队列中尚未处理的数据丢失，那么可以使用 cancel_join_thread()。但这种情况非常罕见，通常建议避免使用，除非你明确知道其影响。
 
+#### 20.1.3.2 管道 (Pipe)
 
+在 Python 中，`multiprocessing.Pipe` 是用于进程间简单高效的通信工具。与 Queue 不同，Pipe 提供了一个单一的双向通信通道（duplex 参数配置），由两个连接点（端点）组成。每个端点可以用来发送或接收数据，两个进程可以通过 Pipe 进行相互通信。
+
+* 工作原理:
+  * multiprocessing.Pipe() 返回一对连接对象 (conn1, conn2)，每个连接对象都有 send() 和 recv() 方法，可以分别用于发送和接收数据;
+  * 通常，Pipe 的两个连接对象分别在不同的进程中使用，一个用于发送数据，另一个用于接收数据;
+  
+* 参数说明: `multiprocessing.Pipe(duplex=True/False)`  
+  duplex（默认值为 True）：决定管道是否为双向通信。
+  * True(默认)：允许双向通信，两端都可以发送和接收数据；
+  * False：管道为单向通信，意味着一端只能发送数据，另一端只能接收数据；
+  
+* 行为：  
+  * send(obj)：将 obj 发送到连接的另一端；
+    * obj: 需要发送的对象，这个对象必须是可序列化的（可以通过 pickle 模块进行序列化）； 
+  * recv()：接收通过 send() 发送的对象。如果没有数据，会阻塞直到接收到数据；
+  * close()：关闭管道，禁止进一步的发送或接收操作。调用此方法后，尝试使用 send() 或 recv() 会引发异常；
+  * poll([timeout])：检查是否有数据可供接收，如果有返回 True，否则返回 False;
+    * timeout（可选）：设置超时时间，等待管道中是否有数据可接收。如果不传递该参数，poll() 将立即返回 True 或 False。如果设置了超时时间（单位为秒），poll() 会阻塞指定的时间，直到有数据或超时；
+* 优缺：
+  * 优点：
+    * Pipe 提供了简单且高效的双向通信机制，非常适合轻量级的通信需求；
+    * 在性能上，Pipe 通常比 Queue 更快，因为 Queue 基于底层的锁机制，而 Pipe 则是基于文件描述符的轻量机制；
+  * 缺点：
+    * Pipe 只允许两个进程之间通信，不像 Queue 那样适合多进程通信。如果需要多个进程之间进行通信，可以使用 Queue；
+* Pipe 与 Queue 的比较
+    * Pipe 更适合双进程之间的快速通信，提供更轻量的通信机制；
+    * Queue 适合在多个进程之间共享数据，但性能较低，因为它需要处理更多的并发控制和锁；
+* 使用 Pipe 的场景
+  * 双向通信：两个进程之间需要相互通信，例如客户端-服务器模式；
+  * 单向通信：只需要一个进程发送数据，另一个进程接收并处理数据，使用 duplex=False 的 Pipe 能减少复杂性和不必要的操作；
+* 示例：  
+
+**示例 1：单向通信（duplex=False）**
+```python
+import multiprocessing
+
+
+def worker(conn):
+    # 子进程接收来自主进程的消息
+    while True:
+        msg = conn.recv()
+        if msg == "END":
+            print("Worker received termination signal.")
+            break
+        print(f"Worker received: {msg}")
+
+
+if __name__ == "__main__":
+    # 创建单向管道（第二个连接用来发送，第一个用来接收）
+    recv_conn, send_conn = multiprocessing.Pipe(duplex=False)
+
+    # 启动子进程
+    process = multiprocessing.Process(target=worker, args=(recv_conn,))
+    process.start()
+
+    # 主进程发送消息
+    send_conn.send("Hello Child")
+
+    # 发送结束信号
+    send_conn.send("END")
+    process.join()
+
+# 输出：
+# Worker received: Hello Child
+# Worker received termination signal.
+```
+在 multiprocessing.Pipe(duplex=False) 中，返回两个连接对象 (conn1 和 conn2)，但在单向通信中，它们的作用是固定的：
+
+* conn1（recv_conn）：用于接收数据;
+* conn2（send_conn）：用于发送数据;
+
+如果尝试用 send_conn.recv() 或 recv_conn.send()，将会导致错误，因为 duplex=False 限制了通信的方向。
+
+**示例 2：双向通信（默认：duplex=True）**
+
+```python
+import multiprocessing
+
+
+def worker(conn):
+    # 子进程接收来自主进程的消息
+    msg = conn.recv()
+    print(f"Worker received: {msg}")
+    # 子进程发送响应消息
+    conn.send("Message received by worker")
+    # 关闭连接
+    conn.close()
+    # OSError: handle is closed
+    # conn.send("Test")
+
+
+if __name__ == "__main__":
+    # 创建一个双向管道：默认：duplex=True
+    conn1, conn2 = multiprocessing.Pipe(duplex=True)
+    # 启动子进程
+    process = multiprocessing.Process(target=worker, args=(conn2,))
+    process.start()
+    # 主进程发送消息
+    conn1.send("Hello,World!")
+    # 接受来自子进程的消息
+    msg = conn1.recv()
+    print(f"Parent received: {msg}")
+    process.join()
+
+# 输出：
+# Worker received: Hello,World!
+# Parent received: Message received by worker
+```
+双向管道允许主进程和子进程相互发送和接收消息，conn1 和 conn2 都可以用 send() 和 recv()。
+
+**示例 3：综合示例**
+
+```python
+import multiprocessing
+import time
+
+def worker(conn):
+    # 子进程通过 conn 发送数据
+    for i in range(5):
+        conn.send(i)
+        print(f"Worker sent: {i}")
+        time.sleep(1)
+    # 关闭连接
+    conn.send(None)  # 发送结束信号
+    conn.close()
+
+if __name__ == "__main__":
+    # 创建管道
+    parent_conn, child_conn = multiprocessing.Pipe()
+
+    # 启动子进程
+    process = multiprocessing.Process(target=worker, args=(child_conn,))
+    process.start()
+
+    # 主进程从管道中接收数据
+    while True:
+        # 检查管道中是否有数据
+        if parent_conn.poll(2):  # 最多等待2秒
+            data = parent_conn.recv()
+            if data is None:  # 如果收到结束信号，则退出循环
+                print("Received termination signal. Exiting.")
+                break
+            print(f"Parent received: {data}")
+        else:
+            print("No data received within the timeout.")
+
+    # 等待子进程结束
+    process.join()
+
+    print("All tasks processed.")
+```
 
 ### 20.2 线程 (Thread)
 
