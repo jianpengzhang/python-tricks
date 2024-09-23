@@ -6677,7 +6677,7 @@ if __name__ == "__main__":
   由于 Manager.Queue() 通过代理对象来管理队列，它的 put() 和 get() 操作是原子的，因此在多个进程同时执行时不会出现竞争条件。这一点与 Namespace 中的非原子操作（如 +=）不同。  
   举个例子，如果两个进程同时调用 queue.put()，代理对象会确保每次操作完整进行，因此数据不会丢失或混乱。类似地，queue.get() 也是进程安全的，如果两个进程同时从队列中取数据，代理对象会保证每个进程获取的数据都是唯一的。
 
-  **进程安全的锁使用示例：**  
+  **进程安全锁的使用示例：**  
   尽管 Manager.Queue() 本身是进程安全的，但有时候我们可能需要对队列外的操作进行锁定，避免多个进程同时修改非队列的共享数据。
 
   ```python
@@ -6725,6 +6725,146 @@ if __name__ == "__main__":
   # Main process got data: 4
   ```
 
+* 示例 4：使用 Lock & RLock 进程间同步和控制访问  
+  通过 manager.Lock() 和 manager.RLock() 来实现进程间的同步和控制访问。
+  * `manager.Lock()`  
+    `manager.Lock()` 是用于进程间同步的标准互斥锁，它确保只有一个进程在同一时刻可以访问共享资源。其他进程在尝试获取该锁时，如果锁已被持有，它们将被阻塞，直到锁被释放。  
+    
+    **常见方法：**
+      * `acquire(block=True, timeout=None)`：获取锁，如果 block 为 True（默认），则阻塞直到锁被释放；否则立即返回。如果设置了 timeout，则最多等待 timeout 秒；
+      * `release()`：释放锁，使其他等待的进程可以获取该锁；  
+    
+    **Lock 示例：**  
+  
+    ```python
+    import multiprocessing
+    
+    def worker(lock, shared_list, value):
+        with lock:  # 使用锁来同步对共享资源的访问
+            shared_list.append(value)
+            print(f"Process {value} added to list.")
+    
+    if __name__ == "__main__":
+        manager = multiprocessing.Manager()
+        lock = manager.Lock()  # 创建一个 Manager 提供的锁
+        shared_list = manager.list()  # 创建一个共享列表
+    
+        processes = []
+        for i in range(5):
+            p = multiprocessing.Process(target=worker, args=(lock, shared_list, i))
+            processes.append(p)
+            p.start()
+    
+        for p in processes:
+            p.join()
+    
+        print("Final list:", list(shared_list))
+    
+    # 输出：
+    # Process 0 added to list.
+    # Process 1 added to list.
+    # Process 2 added to list.
+    # Process 3 added to list.
+    # Process 4 added to list.
+    # Final list: [0, 1, 2, 3, 4]
+    ``` 
+    在这个例子中，每个进程在访问共享列表之前都要先获取锁，从而避免多个进程同时访问列表并导致竞态条件。只有一个进程在某个时刻可以修改共享列表。
+
+  * `manager.RLock()`  
+    `manager.RLock()` 是可重入锁，它允许同一个进程多次获取锁而不会发生死锁。与 Lock() 不同，RLock() 允许持有锁的线程或进程再次获取锁，而不会导致自己阻塞，直到调用相同次数的 release() 以释放锁。
+
+    **常见方法：**  
+      * `acquire(block=True, timeout=None)`：与 Lock 类似，但允许同一进程多次获取锁;
+      * `release()`：与 Lock 类似，需要与获取锁的次数一致，调用多少次 acquire() 就需要相同次数的 release() 才能完全释放锁;
+      
+    **Lock 示例：**
+    ```python
+        import multiprocessing
+    
+    
+    def worker(rlock, shared_dict, key, value):
+        with rlock:  # 获取可重入锁
+            if key not in shared_dict:
+                print(f"Adding {key} to shared dict.")
+                shared_dict[key] = value
+            with rlock:  # 再次获取锁，测试重入
+                print(f"Updating {key} to {value * 2}.")
+                shared_dict[key] = value * 2
+    
+    
+    if __name__ == "__main__":
+        manager = multiprocessing.Manager()
+        rlock = manager.RLock()  # 创建一个 Manager 提供的可重入锁
+        shared_dict = manager.dict()  # 创建一个共享字典
+    
+        processes = []
+        for i in range(5):
+            p = multiprocessing.Process(target=worker, args=(rlock, shared_dict, i, i * 10))
+            processes.append(p)
+            p.start()
+    
+        for p in processes:
+            p.join()
+    
+        print("Final dict:", dict(shared_dict))
+    
+    
+    # 输出：
+    # Adding 1 to shared dict.
+    # Updating 1 to 20.
+    # Adding 0 to shared dict.
+    # Updating 0 to 0.
+    # Adding 2 to shared dict.
+    # Updating 2 to 40.
+    # Adding 3 to shared dict.
+    # Updating 3 to 60.
+    # Adding 4 to shared dict.
+    # Updating 4 to 80.
+    # Final dict: {1: 20, 0: 0, 2: 40, 3: 60, 4: 80}
+    ```
+    在这个例子中，每个进程可以多次获取 RLock() 锁而不会发生死锁。在第一次获取锁后，进程会尝试再次获取锁，确保同一个进程可以重入。
+
+  * Lock 和 RLock 的区别：    
+    * Lock 是普通的锁，只有一个进程或线程可以持有，其他试图获取锁的进程会阻塞。任何进程只能调用一次 acquire()，然后必须调用一次 release() 才能释放锁；
+    * RLock 是可重入锁，同一进程或线程可以多次获取该锁，但需要调用相同次数的 release() 才能完全释放锁。这对于递归函数或需要多次调用共享资源的情况下非常有用；  
+    
+  * 竞争关系与进程同步：  
+    在使用 Lock 或 RLock 时，锁的目的是防止多个进程同时访问和修改共享资源，从而避免出现竞争条件（例如多个进程同时修改一个变量的值，导致结果不正确）。
+    * manager.Lock() 确保在某一时刻只有一个进程能够修改共享对象。这对于简单的修改操作非常有用，比如向共享列表中添加元素；
+    * manager.RLock() 更加灵活，适用于需要递归调用或同一进程多次锁定资源的情况；
+    
+  * 进程同步的注意事项：  
+    在进程间同步时，锁的使用能够保证数据的一致性，但是也要注意锁的使用可能会影响性能，尤其是在大量进程同时等待锁时。因此，应尽量将锁的作用范围控制在最小的代码区域中，减少锁的持有时间。
+  
+  * 【扩展知识点】  
+     在 Python 中，Lock 和 RLock 都可以使用 with 语句来管理锁的获取和释放。这是通过上下文管理器（Context Manager）来实现的。with 语句在处理锁时，自动处理了锁的 acquire() 和 release()，使得代码更加简洁和安全。具体来说：  
+     * with lock: 是上下文管理器的一部分，进入 with 语句块时，自动调用 lock.acquire()；  
+     * 当退出 with 语句块时，无论是正常退出还是发生异常，都会自动调用 lock.release()；  
+     
+     **手动调用 acquire() 和 release():**  
+  
+       通常，使用锁的标准做法是手动调用 acquire() 来获取锁，并在完成操作后手动调用 release() 来释放锁：  
+  
+       ```
+       lock.acquire()
+       try:
+       # 对共享资源进行操作
+       finally:
+           lock.release()  # 确保锁在任何情况下都能释放
+       ``` 
+       手动调用的风险在于，如果程序出现异常而没有执行 release()，锁将一直被持有，导致其他进程无法获取该锁，从而可能导致死锁或程序无法继续。
+    
+     **使用 with 管理锁**  
+       with 语句相当于为 acquire() 和 release() 创建了一种自动化的机制，使得即使在出现异常时，锁也能够被正确释放。它让代码更加简洁和易于维护。等价的代码如下：  
+       ```
+       with lock:
+       # 对共享资源进行操作
+       ```
+       当进入 with 代码块时，lock.acquire() 被调用，执行代码块中的操作。当离开 with 代码块时，无论是正常离开还是异常离开，都会调用 lock.release()，确保锁被释放。    
+       * 简洁性：减少代码量，不需要手动调用 acquire() 和 release()，且代码更加直观。  
+       * 安全性：避免忘记释放锁的风险，即使出现异常也能确保锁被正确释放，防止死锁。  
+       * 自动化管理：with 语句自动管理资源的获取和释放，遵循上下文管理器的机制，使代码更加 Pythonic。  
+  
 ### 20.2 线程 (Thread)
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
