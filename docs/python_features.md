@@ -6585,9 +6585,145 @@ if __name__ == "__main__":
   * 数据不一致：竞争条件会导致数据的不可预测性，最终的数据状态可能与预期不符，造成错误的计算结果；  
   * 难以调试：由于竞争条件往往是依赖于执行顺序的随机性，这使得调试和发现问题变得困难，问题可能只在特定的运行条件下才会显现；      
 
-  **小结**    
   竞争条件是在并发环境下，由于多个进程或线程争用共享资源并且没有适当的同步机制，导致程序结果不确定或不一致的现象。为了避免竞争条件，需要使用适当的同步机制来确保共享资源的访问顺序是可控的。
 
+
+* 示例 3：使用 Queue 在进程之间通信
+
+  multiprocessing.Manager.Queue() 是 multiprocessing.Queue() 的一种变体，它通过 Manager 机制创建一个共享队列，可以在不同的进程甚至网络中的机器间共享。它与标准的 multiprocessing.Queue() 一样是进程间通信的工具，允许将数据传递到不同的进程中。然而，Manager.Queue() 是通过 SyncManager 代理来管理的，这使得它不仅可以用于本地进程间通信，还可以通过网络实现远程进程间通信。
+
+  **特点：**  
+  * 进程安全：Manager.Queue() 是进程安全的，类似于 multiprocessing.Queue()，但它通过管理器代理实现，所以更加通用，可以跨机器使用；  
+  * 网络共享：Manager.Queue() 可以在不同机器间通过网络共享数据，这点区别于标准的 multiprocessing.Queue()；  
+  * 竞争关系：Manager.Queue() 通过代理机制来管理数据操作，类似于 list.append()、dict.update() 之类的操作，管理器确保操作的进程安全性，因此能够避免竞争条件；  
+
+  **方法与属性：**  
+  * `put(item)`：将 item 放入队列中；
+  * `get()`：从队列中取出一个项（如果队列为空，会阻塞直到有数据为止）；
+  * `qsize()`：返回队列中的项目数（有时无法准确保证，尤其在跨机器使用时）；
+  * `empty()`：检查队列是否为空；
+  * `full()`：检查队列是否已满；
+  * `put_nowait(item)`：非阻塞地将 item 放入队列中，如果队列已满，则抛出 queue.Full 异常；
+  * `get_nowait()`：非阻塞地从队列中取出一项，如果队列为空，则抛出 queue.Empty 异常；
+  * `close()`：关闭队列，防止进一步的 put 操作；
+
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def producer(queue, items):
+      for item in items:
+          print(f"Producer adding: {item}")
+          queue.put(item)
+          time.sleep(1)
+  
+  
+  def consumer(queue):
+      while True:
+          item = queue.get()
+          if item is None:  # 检测到 None 作为结束信号
+              break
+          print(f"Consumer processing: {item}")
+  
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+  
+      # 创建共享的队列
+      queue = manager.Queue()
+  
+      # 启动生产者进程
+      items_to_produce = [1, 2, 3, 4, 5]
+      producer_process = multiprocessing.Process(target=producer, args=(queue, items_to_produce))
+  
+      # 启动消费者进程
+      consumer_process = multiprocessing.Process(target=consumer, args=(queue,))
+  
+      # 启动生产者和消费者
+      producer_process.start()
+      consumer_process.start()
+  
+      # 等待生产者完成
+      producer_process.join()
+  
+      # 发送结束信号给消费者
+      queue.put(None)
+  
+      # 等待消费者完成
+      consumer_process.join()
+  
+      print("All tasks processed.")
+  
+  # 输出：
+  # Producer adding: 1
+  # Consumer processing: 1
+  # Producer adding: 2
+  # Consumer processing: 2
+  # Producer adding: 3
+  # Consumer processing: 3
+  # Producer adding: 4
+  # Consumer processing: 4
+  # Producer adding: 5
+  # Consumer processing: 5
+  # All tasks processed.
+  ```
+
+  * 生产者进程 不断向队列中放入数据；
+  * 消费者进程 从队列中读取数据并处理，直到检测到 None 作为结束信号；
+  * Manager.Queue() 保证了进程间队列通信的安全性；
+
+  **竞争关系的说明：**  
+  由于 Manager.Queue() 通过代理对象来管理队列，它的 put() 和 get() 操作是原子的，因此在多个进程同时执行时不会出现竞争条件。这一点与 Namespace 中的非原子操作（如 +=）不同。  
+  举个例子，如果两个进程同时调用 queue.put()，代理对象会确保每次操作完整进行，因此数据不会丢失或混乱。类似地，queue.get() 也是进程安全的，如果两个进程同时从队列中取数据，代理对象会保证每个进程获取的数据都是唯一的。
+
+  **进程安全的锁使用示例：**  
+  尽管 Manager.Queue() 本身是进程安全的，但有时候我们可能需要对队列外的操作进行锁定，避免多个进程同时修改非队列的共享数据。
+
+  ```python
+  import multiprocessing
+  
+  
+  def worker(queue, value, lock):
+      with lock:  # 使用锁保护
+          queue.put(value)  # 向队列中添加数据
+          print(f"Worker {value} put data in queue.")
+  
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      queue = manager.Queue()  # 创建一个共享队列
+      lock = multiprocessing.Lock()  # 创建锁
+  
+      processes = []
+  
+      # 启动多个进程，向队列中放入数据
+      for i in range(5):
+          p = multiprocessing.Process(target=worker, args=(queue, i, lock))
+          processes.append(p)
+          p.start()
+  
+      # 等待所有进程结束
+      for p in processes:
+          p.join()
+  
+      # 从队列中取出所有数据
+      while not queue.empty():
+          data = queue.get()
+          print(f"Main process got data: {data}")
+  
+  # 输出：
+  # Worker 0 put data in queue.
+  # Worker 1 put data in queue.
+  # Worker 2 put data in queue.
+  # Worker 3 put data in queue.
+  # Worker 4 put data in queue.
+  # Main process got data: 0
+  # Main process got data: 1
+  # Main process got data: 2
+  # Main process got data: 3
+  # Main process got data: 4
+  ```
 
 ### 20.2 线程 (Thread)
 
