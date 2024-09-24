@@ -6413,7 +6413,7 @@ if __name__ == "__main__":
 
 以下是关于 multiprocessing.Manager 的使用示例:  
 
-* 示例 1：共享字典和列表  
+* **示例 1：共享字典和列表**  
 在这个例子中，多个进程可以同时修改共享的字典和列表，并且这些修改对其他进程可见。  
 
   ```python
@@ -6453,9 +6453,9 @@ if __name__ == "__main__":
   # Shared List: [1, 2, 3, 0, 4]
   ```
   * 每个进程都修改了共享的字典 shared_dict 和共享的列表 shared_list;
-  * Manager 确保了这些对象可以在进程间安全地共享;
-
-* 示例 2：使用 Namespace 在进程之间共享简单的变量  
+  * Manager 确保了这些对象可以在进程间安全地共享;   
+<br/>
+* **示例 2：使用 Namespace 在进程之间共享简单的变量**  
   `Namespace` 允许多个进程共享简单的命名空间变量，适合共享单一值而不是复杂的数据结构。
   ```python
   import multiprocessing
@@ -6588,7 +6588,7 @@ if __name__ == "__main__":
   竞争条件是在并发环境下，由于多个进程或线程争用共享资源并且没有适当的同步机制，导致程序结果不确定或不一致的现象。为了避免竞争条件，需要使用适当的同步机制来确保共享资源的访问顺序是可控的。
 
 
-* 示例 3：使用 Queue 在进程之间通信
+* **示例 3：使用 Queue 在进程之间通信**
 
   multiprocessing.Manager.Queue() 是 multiprocessing.Queue() 的一种变体，它通过 Manager 机制创建一个共享队列，可以在不同的进程甚至网络中的机器间共享。它与标准的 multiprocessing.Queue() 一样是进程间通信的工具，允许将数据传递到不同的进程中。然而，Manager.Queue() 是通过 SyncManager 代理来管理的，这使得它不仅可以用于本地进程间通信，还可以通过网络实现远程进程间通信。
 
@@ -6725,7 +6725,7 @@ if __name__ == "__main__":
   # Main process got data: 4
   ```
 
-* 示例 4：使用 Lock & RLock 进程间同步和控制访问  
+* **示例 4：使用 Lock & RLock 进程间同步和控制访问**  
   通过 manager.Lock() 和 manager.RLock() 来实现进程间的同步和控制访问。
   * `manager.Lock()`  
     `manager.Lock()` 是用于进程间同步的标准互斥锁，它确保只有一个进程在同一时刻可以访问共享资源。其他进程在尝试获取该锁时，如果锁已被持有，它们将被阻塞，直到锁被释放。  
@@ -6863,7 +6863,307 @@ if __name__ == "__main__":
        当进入 with 代码块时，lock.acquire() 被调用，执行代码块中的操作。当离开 with 代码块时，无论是正常离开还是异常离开，都会调用 lock.release()，确保锁被释放。    
        * 简洁性：减少代码量，不需要手动调用 acquire() 和 release()，且代码更加直观。  
        * 安全性：避免忘记释放锁的风险，即使出现异常也能确保锁被正确释放，防止死锁。  
-       * 自动化管理：with 语句自动管理资源的获取和释放，遵循上下文管理器的机制，使代码更加 Pythonic。  
+       * 自动化管理：with 语句自动管理资源的获取和释放，遵循上下文管理器的机制，使代码更加 Pythonic。    
+<br/>
+* **示例 5：Manager 中的 Value 和 Array**  
+  multiprocessing.Manager().Value 和 multiprocessing.Manager().Array 是 multiprocessing 模块中用于进程间共享数据的高级工具。它们通过管理器对象提供了进程间安全数据共享方式。与 multiprocessing.Value 和 multiprocessing.Array 的共享内存实现不同，Manager().Value 和 Manager().Array 通过代理模式使用，这使得它们不仅可以在同一台机器上共享，还可以通过网络在不同机器之间共享数据。
+  * `Manager().Value(typecode, value)`：创建一个用于共享的值对象。
+    * `typecode`：表示值的类型，例如 'i' 表示整数，'d' 表示双精度浮点数；
+    * `value`：初始化时的值；
+  * `Manager().Array(typecode, sequence)`：创建一个用于共享的数组对象。
+    * `typecode`：表示数组元素的类型，例如 'i' 表示整数，'d' 表示双精度浮点数；
+    * `sequence`：用于初始化数组的序列；  
+    
+  示例：Manager().Value 的用法  
+  ```python
+    import multiprocessing
+    
+    def worker(shared_value, lock):
+        with lock:
+            shared_value.value += 1  # 在共享变量上执行加法操作
+    
+    if __name__ == "__main__":
+        manager = multiprocessing.Manager()
+        shared_value = manager.Value('i', 0)  # 共享整数变量，初始值为0
+        lock = manager.Lock()  # 用于同步的锁
+    
+        processes = []
+        for _ in range(5):
+            p = multiprocessing.Process(target=worker, args=(shared_value, lock))
+            processes.append(p)
+            p.start()
+    
+        for p in processes:
+            p.join()
+    
+        print(f"Final Value: {shared_value.value}")  # 输出应该为 5
+  ```
+
+  * manager.Value('i', 0) 创建了一个初始值为 0 的共享整数;
+  * 使用 lock 来确保对共享变量的操作是原子的（防止竞争条件）;
+  * 每个进程都会对共享变量执行 +1 操作，因此最终值为 5;
+
+  示例：Manager().Array 的用法  
+  ```python
+  import multiprocessing
+  
+  def worker(shared_array, lock):
+      with lock:
+          for i in range(len(shared_array)):
+              shared_array[i] += 1  # 增加每个数组元素的值
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      shared_array = manager.Array('i', [1, 2, 3])  # 创建一个共享数组
+      lock = manager.Lock()
+  
+      processes = []
+      for _ in range(3):
+          p = multiprocessing.Process(target=worker, args=(shared_array, lock))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+  
+      print(f"Final Array: {shared_array[:]}")  # 输出应该为 [4, 5, 6]  
+  ```
+  * manager.Array('i', [1, 2, 3]) 创建了一个初始为 [1, 2, 3] 的共享数组；
+  * 每个进程都会将数组中的每个元素加 1；
+  * 最终数组的结果是 [4, 5, 6]；
+
+  **Manager().Value 和 Manager().Array 与 Namespace 的区别：**  
+  * 共享机制：
+    * Manager().Value 和 Manager().Array 是通过代理模式进行通信的，支持跨进程和跨机器的数据共享；
+    * Namespace 提供一个简单的共享空间，但它是一个更为通用的数据容器，并且需要手动使用锁来避免竞争条件；
+  * 线程/进程安全：
+    * Manager().Value 和 Manager().Array 默认在一定程度上提供了进程间安全的共享机制，但对于复杂的并发访问场景，仍建议使用显式锁来避免数据竞争。
+    * Namespace 并没有内置锁机制，必须手动加锁来保证数据操作的安全性。  
+<br/>
+* **示例 6：Manager().Barrier**  
+  Barrier 用于同步多个进程，确保所有进程在某个点上等待彼此。
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(barrier, id):
+      print(f"Process {id} is doing some work...")
+      time.sleep(2)  # 模拟工作
+      print(f"Process {id} is ready at the barrier.")
+      barrier.wait()  # 等待其他进程到达此点
+      print(f"Process {id} has crossed the barrier.")
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      barrier = manager.Barrier(3)  # 设置需要等待的进程数量
+  
+      processes = []
+      for i in range(3):
+          p = multiprocessing.Process(target=worker, args=(barrier, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()  # 等待所有进程结束
+          
+  # 输出：
+  # Process 1 is doing some work...
+  # Process 0 is doing some work...
+  # Process 2 is doing some work...
+  # Process 1 is ready at the barrier.
+  # Process 0 is ready at the barrier.
+  # Process 2 is ready at the barrier.
+  # Process 2 has crossed the barrier.
+  # Process 0 has crossed the barrier.
+  # Process 1 has crossed the barrier.
+  ```
+
+  * 每个进程在完成工作后会调用 barrier.wait()，这会使其阻塞，直到所有进程都到达这个点;
+  * 当所有进程都到达后，它们将一起继续执行;  
+<br/>
+* **示例 7：Manager().BoundedSemaphore**    
+  BoundedSemaphore 用于限制同时访问的进程数。  
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(sem, id):
+      with sem:  # 获取信号量
+          print(f"Process {id} is accessing the resource.")
+          time.sleep(2)  # 模拟访问资源
+          print(f"Process {id} has released the resource.")
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      semaphore = manager.BoundedSemaphore(2)  # 允许同时两个进程访问
+  
+      processes = []
+      for i in range(5):
+          p = multiprocessing.Process(target=worker, args=(semaphore, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()  # 等待所有进程结束
+  
+  # 输出：
+  # Process 1 is accessing the resource.
+  # Process 3 is accessing the resource.
+  # Process 1 has released the resource.
+  # Process 0 is accessing the resource.
+  # Process 3 has released the resource.
+  # Process 2 is accessing the resource.
+  # Process 0 has released the resource.
+  # Process 4 is accessing the resource.
+  # Process 2 has released the resource.
+  # Process 4 has released the resource.
+  ```
+
+  * BoundedSemaphore 限制最多只有两个进程可以同时访问资源，其他进程需要等待；
+  * 使用 with sem: 自动管理信号量的获取和释放；  
+<br/>
+* **示例 8：Manager().Condition**    
+  Condition 允许进程在某个条件下等待，并可以被其他进程通知。  
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(condition):
+      with condition:
+          print("Worker is waiting for the condition.")
+          condition.wait()  # 等待条件被通知
+          print("Worker has been notified and is continuing work.")
+  
+  def notifier(condition):
+      time.sleep(2)  # 模拟一些工作
+      with condition:
+          print("Notifier is notifying the worker.")
+          condition.notify()  # 通知等待的进程
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      condition = manager.Condition()
+  
+      worker_process = multiprocessing.Process(target=worker, args=(condition,))
+      notifier_process = multiprocessing.Process(target=notifier, args=(condition,))
+  
+      worker_process.start()
+      notifier_process.start()
+  
+      worker_process.join()
+      notifier_process.join()
+  
+  # 输出：
+  # Worker is waiting for the condition.
+  # Notifier is notifying the worker.
+  # Worker has been notified and is continuing work.
+  ```
+
+  * worker 进程在等待条件时会阻塞，直到被 notifier 进程通知；
+  * condition.notify() 通知所有等待的进程继续执行；  
+<br/>
+* **示例 9：Manager().Event**    
+  Event 允许一个或多个进程等待某个事件的发生。  
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(event):
+      print("Worker is waiting for the event to be set.")
+      event.wait()  # 等待事件被设置
+      time.sleep(2)
+      print("Worker has received the event.")
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      event = manager.Event()
+  
+      worker_process = multiprocessing.Process(target=worker, args=(event,))
+      worker_process.start()
+  
+      time.sleep(2)  # 主进程做一些工作
+      print("Main process is setting the event.")
+      event.set()  # 设置事件，通知工作进程，主进程继续执行
+      print("Main process continue.")
+      worker_process.join()  # 等待工作进程结束
+  
+  # 输出：
+  # Worker is waiting for the event to be set.
+  # Main process is setting the event.
+  # Main process continue.
+  # Worker has received the event.
+  ```
+  * worker 进程会阻塞在 event.wait()，直到主进程调用 event.set()；
+  * 一旦事件被设置，工作进程将继续执行；  
+<br/>
+* **示例 10：Manager().Semaphore**    
+  Semaphore 控制对特定资源的访问，允许一定数量的进程同时访问。
+  ```python
+  import multiprocessing
+  import time
+  
+  def worker(sem, id):
+      with sem:  # 获取信号量
+          print(f"Process {id} is accessing the resource.")
+          time.sleep(2)  # 模拟访问资源
+          print(f"Process {id} has released the resource.")
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      semaphore = manager.Semaphore(2)  # 允许同时两个进程访问
+  
+      processes = []
+      for i in range(5):
+          p = multiprocessing.Process(target=worker, args=(semaphore, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()  # 等待所有进程结束
+  ```
+  * Semaphore 允许最多两个进程同时访问资源，其他进程需等待;
+  * 使用 with sem: 语句简化了信号量的管理;  
+<br/>
+* **示例 11：Manager().Semaphore() 和 Manager().BoundedSemaphore() 区别**      
+  * Manager().Semaphore()
+    * 功能：允许你创建一个信号量，可以控制同时访问某个资源的进程数；
+    * 特点：没有上限，只要信号量的计数大于 0，进程就可以获取信号量。即使当前进程已经释放信号量，计数可以超过初始值；
+  * Manager().BoundedSemaphore()
+    * 功能：也是用于控制并发访问的信号量，但它具有一个上限；
+    * 特点：确保信号量的计数不会超过初始值。若超过该值，调用 release() 将引发 ValueError；
+
+  示例对比：  
+  ```python
+  import multiprocessing
+  
+  # 使用 Semaphore
+  def semaphore_worker(sem, id):
+      sem.acquire()
+      print(f"Semaphore Worker {id} acquired semaphore.")
+      sem.release()
+      print(f"Semaphore Worker {id} released semaphore.")
+  
+  # 使用 BoundedSemaphore
+  def bounded_semaphore_worker(bsem, id):
+      bsem.acquire()
+      print(f"BoundedSemaphore Worker {id} acquired bounded semaphore.")
+      bsem.release()
+      print(f"BoundedSemaphore Worker {id} released bounded semaphore.")
+  
+  if __name__ == "__main__":
+      manager = multiprocessing.Manager()
+      
+      # Semaphore 示例
+      sem = manager.Semaphore(2)
+      for i in range(3):
+          multiprocessing.Process(target=semaphore_worker, args=(sem, i)).start()
+  
+      # BoundedSemaphore 示例
+      bsem = manager.BoundedSemaphore(2)
+      for i in range(3):
+          multiprocessing.Process(target=bounded_semaphore_worker, args=(bsem, i)).start()
+  ```
+  如果你需要限制并发访问且想要防止超过最大限制，使用 BoundedSemaphore；如果不需要这种限制，可以使用普通的 Semaphore。
   
 ### 20.2 线程 (Thread)
 
