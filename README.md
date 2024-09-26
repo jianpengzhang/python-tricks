@@ -72,3 +72,6 @@
           * [20.1.3.1 队列 (Queue)](docs/python_features.md#20131-队列-queue)
           * [20.1.3.2 管道 (Pipe)](docs/python_features.md#20132-管道-pipe))
           * [20.1.3.3 管理器（Manager）](docs/python_features.md#20133-管理器manager))
+            * [20.1.3.3.1 multiprocessing.Manager()](docs/python_features.md#201331-multiprocessingmanager)
+            * [20.1.3.3.2 自定义管理器](docs/python_features.md#201332-自定义管理器))
+            * [20.1.3.3.3 使用远程管理器](docs/python_features.md#201333-使用远程管理器))
