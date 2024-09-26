@@ -7134,35 +7134,54 @@ if __name__ == "__main__":
 
   示例对比：  
   ```python
-  import multiprocessing
-  
-  # 使用 Semaphore
-  def semaphore_worker(sem, id):
-      sem.acquire()
-      print(f"Semaphore Worker {id} acquired semaphore.")
-      sem.release()
-      print(f"Semaphore Worker {id} released semaphore.")
-  
-  # 使用 BoundedSemaphore
-  def bounded_semaphore_worker(bsem, id):
-      bsem.acquire()
-      print(f"BoundedSemaphore Worker {id} acquired bounded semaphore.")
-      bsem.release()
-      print(f"BoundedSemaphore Worker {id} released bounded semaphore.")
-  
-  if __name__ == "__main__":
-      manager = multiprocessing.Manager()
-      
-      # Semaphore 示例
-      sem = manager.Semaphore(2)
-      for i in range(3):
-          multiprocessing.Process(target=semaphore_worker, args=(sem, i)).start()
-  
-      # BoundedSemaphore 示例
-      bsem = manager.BoundedSemaphore(2)
-      for i in range(3):
-          multiprocessing.Process(target=bounded_semaphore_worker, args=(bsem, i)).start()
+    import multiprocessing
+    
+    
+    # 使用 Semaphore
+    def semaphore_worker(sem, id):
+        sem.acquire()
+        print(f"Semaphore Worker {id} acquired semaphore.")
+        sem.release()
+        print(f"Semaphore Worker {id} released semaphore.")
+    
+    
+    # 使用 BoundedSemaphore
+    def bounded_semaphore_worker(bsem, id):
+        bsem.acquire()
+        print(f"BoundedSemaphore Worker {id} acquired bounded semaphore.")
+        bsem.release()
+        print(f"BoundedSemaphore Worker {id} released bounded semaphore.")
+    
+    
+    if __name__ == "__main__":
+        manager = multiprocessing.Manager()
+    
+        # Semaphore 示例
+        sem = manager.Semaphore(2)
+        semaphore_processes = []
+        for i in range(3):
+            p = multiprocessing.Process(target=semaphore_worker, args=(sem, i))
+            semaphore_processes.append(p)
+            p.start()
+    
+        # 等待 Semaphore 进程结束
+        for p in semaphore_processes:
+            p.join()
+    
+        # BoundedSemaphore 示例
+        bsem = manager.BoundedSemaphore(2)
+        bounded_semaphore_processes = []
+        for i in range(3):
+            p = multiprocessing.Process(target=bounded_semaphore_worker, args=(bsem, i))
+            bounded_semaphore_processes.append(p)
+            p.start()
+    
+        # 等待 BoundedSemaphore 进程结束
+        for p in bounded_semaphore_processes:
+            p.join()
   ```
+    * Semaphore: 你创建的 Semaphore 允许最多 2 个进程同时访问。如果同时有超过 2 个进程试图调用 acquire()，后续的进程将被阻塞，直到信号量被释放；
+    * BoundedSemaphore: 也有相同的行为，限制最多 2 个进程同时访问。与普通信号量不同的是，如果你尝试释放一个信号量而计数已经达到初始值，会抛出 ValueError；
   如果你需要限制并发访问且想要防止超过最大限制，使用 BoundedSemaphore；如果不需要这种限制，可以使用普通的 Semaphore。
   
 ### 20.2 线程 (Thread)
