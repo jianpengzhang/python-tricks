@@ -7568,6 +7568,371 @@ if __name__ == '__main__':
   * 启动管理器：重新定义并注册共享队列；
   * 运行服务器：启动服务器并等待连接，允许本地进程和远程客户端访问共享队列；
 
+#### 20.1.3.4 共享内存
+
+在 Python 中，multiprocessing 模块提供了共享内存（Shared Memory）功能，使得不同进程之间可以共享数据而不需要使用队列或管道，共享内存通过 `Value` 和 `Array` 对象实现，可以在多个进程之间高效地共享数据。
+
+**共享内存的概念**  
+
+共享内存允许多个进程访问同一块内存区域，这样可以提高数据传递的效率，尤其是在处理大型数据时。共享内存中的数据是可以被多个进程同时访问的，因此需要注意数据的一致性和同步问题。
+
+* multiprocessing.Array: 共享的数组；
+* multiprocessing.Value: 共享的单一值（例如整数或浮点数）；
+* 同步控制：共享内存中的数据需要使用锁或其他同步机制来防止竞态条件；
+
+**示例代码**  
+
+* 示例 1：使用 `Value`
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(shared_value, lock):
+      for _ in range(5):
+          time.sleep(0.1)
+          with lock:  # 获取锁
+              shared_value.value += 1
+  
+  
+  if __name__ == "__main__":
+      # 创建一个共享内存的 Value
+      shared_value = multiprocessing.Value('i', 0)  # 'i' 表示整型
+      lock = multiprocessing.Lock()  # 创建锁
+  
+      # 创建多个进程
+      processes = []
+      for _ in range(3):  # 启动3个进程
+          process = multiprocessing.Process(target=worker, args=(shared_value, lock))
+          processes.append(process)
+          process.start()
+  
+      # 等待所有进程完成
+      for process in processes:
+          process.join()
+  
+      print(f'Final value: {shared_value.value}')
+  ```
+  * 创建锁：使用 multiprocessing.Lock() 创建一个锁对象；
+  * 获取和释放锁：在访问共享内存时，使用 with lock: 语句来自动获取锁和释放锁。这可以确保在锁被持有时，其他进程无法访问该资源；
+  * 多个进程：在这个示例中，我们启动了多个进程同时对共享变量进行增值操作，通过加锁确保数据的一致性；
+
+* 示例 2：共享数组（`Array`）
+
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(shared_array, lock):
+      for i in range(len(shared_array)):
+          time.sleep(0.1)
+          with lock:  # 获取锁
+              shared_array[i] += 1
+  
+  
+  if __name__ == "__main__":
+      # 创建一个共享内存的 Array
+      shared_array = multiprocessing.Array('i', [0, 1, 2, 3, 4])  # 'i' 表示整型数组
+      lock = multiprocessing.Lock()  # 创建锁
+  
+      # 创建多个进程
+      processes = []
+      for _ in range(3):  # 启动3个进程
+          process = multiprocessing.Process(target=worker, args=(shared_array, lock))
+          processes.append(process)
+          process.start()
+  
+      # 等待所有进程完成
+      for process in processes:
+          process.join()
+  
+      print(f'Final array: {[shared_array[i] for i in range(len(shared_array))]}')
+  
+  # 输出：
+  # Final array: [3, 4, 5, 6, 7]
+  ```
+
+`multiprocessing.Value` 和 `multiprocessing.Array` 默认在一定程度上提供了进程间安全的共享机制，但对于复杂的并发访问场景，仍建议使用显式锁来避免数据竞争；
+
+#### 20.1.3.5 同步原语
+
+在 Python 的多进程编程中，进程同步是指协调多个进程之间的执行顺序，以避免竞争条件和数据不一致的问题。Python 的 multiprocessing 模块提供了多种同步原语：Lock、RLock、Semaphore、Event、Condition、Barrier。通常来说同步原语在多进程环境中并不像它们在多线程环境中那么必要。
+
+* `Lock`（锁）  
+  锁用于确保同一时刻只有一个进程可以访问共享资源。可以使用 `with` 语句自动管理锁的获取和释放。  
+  * `acquire(block=True, timeout=None)`：用于请求锁的获取。
+    * `block（默认值为 True）`：如果设置为 True，则当锁被其他进程持有时，当前进程会阻塞，直到锁可用。如果设置为 False，则当前进程不会阻塞，如果锁不可用，则立即返回 False；
+    * `timeout（默认值为 None）`：指定阻塞等待锁的最长时间（以秒为单位）。如果在超时时间内未获取到锁，方法将返回 False。如果不设置或设置为 None，则会无限期等待；
+  * `release()`：用于释放锁，使其他进程可以获取该锁。调用 release 必须在锁被当前进程持有的情况下，否则会引发 RuntimeError。
+
+  示例：    
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(lock, num):
+      with lock:  # 获取锁
+          print(f'Process {num} is running.')
+          time.sleep(1)  # 模拟处理时间
+      print(f'Process {num} is success.')
+  
+  
+  if __name__ == "__main__":
+      lock = multiprocessing.Lock()
+      processes = []
+  
+      for i in range(5):
+          p = multiprocessing.Process(target=worker, args=(lock, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+  ```
+
+* `RLock`（递归锁）  
+  递归锁必须由持有进程亲自释放，如果某个进程拿到了递归锁，这个进程可以再次拿到这个锁而不需要等待，但是这个进程拿锁操作和释放锁操作的次数必须相同。
+  
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(rlock, num):
+      with rlock:  # 获取锁
+          print(f'Process {num} is running.')
+          time.sleep(1)
+          with rlock:  # 重新获取锁
+              print(f'Process {num} is still running.')
+  
+  
+  if __name__ == "__main__":
+      rlock = multiprocessing.RLock()
+      processes = []
+  
+      for i in range(3):
+          p = multiprocessing.Process(target=worker, args=(rlock, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+          
+  # 输出：
+  # Process 0 is running.
+  # Process 0 is still running.
+  # Process 1 is running.
+  # Process 1 is still running.
+  # Process 2 is running.
+  # Process 2 is still running.
+  ```
+
+* `Semaphore`（信号量）  
+  一种信号量对象: 允许一定数量的进程同时访问某个资源。通过初始化信号量的计数，可以控制访问的数量。类似于 `threading.Semaphore` 不同在于，它的 `acquire` 方法的第一个参数名是和 `Lock.acquire()` 一样的 `block` 。  
+  **【备注】** 
+    * 在 macOS 上，不支持 sem_timedwait ，所以，调用 acquire() 时如果使用 timeout 参数，会通过循环 sleep 来模拟这个函数的行为；  
+    * 这个包的某些功能依赖于宿主机系统的共享信号量的实现，如果系统没有这个特性， multiprocessing.synchronize 会被禁用，尝试导入这个模块会引发 ImportError 异常；    
+  
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(sem, num):
+      with sem:  # 使用 with 语句自动获取和释放信号量
+          print(f'Process {num} is running.')
+          time.sleep(2)  # 模拟处理时间
+      print(f'Process {num} is end.')
+  
+  
+  # def worker(sem, num):
+  #     sem.acquire()  # 获取信号量
+  #     print(f'Process {num} is running.')
+  #     time.sleep(2)  # 模拟处理时间
+  #     sem.release()  # 释放信号量
+  
+  if __name__ == "__main__":
+      sem = multiprocessing.Semaphore(2)  # 允许最多2个进程同时访问
+      processes = []
+  
+      for i in range(3):
+          p = multiprocessing.Process(target=worker, args=(sem, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+  
+  # 输出：
+  # Process 0 is running.
+  # Process 1 is running.
+  # Process 0 is end.
+  # Process 2 is running.
+  # Process 1 is end.
+  # Process 2 is end.
+  ```
+
+  * with sem: 会在进入块时调用 sem.acquire()，在退出块时调用 sem.release()，即使在块中发生异常，也会确保信号量被释放；
+  * 这样使用可以减少显式调用 acquire() 和 release() 的错误风险，并使代码更易于维护；
+
+* `BoundedSemaphore`（信号量）  
+  `BoundedSemaphore` 类似于 `Semaphore`，但它限制了信号量的最大计数，防止过度释放信号量。
+
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(sem, num):
+      with sem:
+          print(f'Worker {num} is running.')
+          time.sleep(1)  # 模拟工作
+  
+  
+  if __name__ == "__main__":
+      sem = multiprocessing.BoundedSemaphore(2)  # 最大计数为2
+      processes = []
+  
+      for i in range(5):
+          p = multiprocessing.Process(target=worker, args=(sem, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+  
+  # 输出：
+  # Worker 0 is running.
+  # Worker 1 is running.
+  # Worker 4 is running.
+  # Worker 2 is running.
+  # Worker 3 is running.
+  ```
+  
+* `Condition`（条件）  
+  允许一个或多个进程等待某个条件的发生，通常用于复杂的同步场景，比如生产者-消费者模型。
+
+  * acquire(): 获取条件的锁；
+  * release(): 释放条件的锁；
+  * wait(): 释放锁并等待其他进程发出通知；
+  * wait_for(): 重复地调用 wait() 直到满足判断式或者发生超时；
+  * notify(n=1): 唤醒一个等待该条件的进程；
+  * notify_all(): 唤醒所有等待该条件的进程；
+  [参考]：(https://docs.python.org/zh-cn/3/library/threading.html#threading.Condition.acquire)
+  
+  **示例:**  
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def producer(cond):
+      # 在获取锁后模拟生产，完成后调用 notify() 通知消费者
+      with cond:  # 获取条件的锁
+          print('Producing...')
+          time.sleep(2)  # 模拟生产时间
+          cond.notify()  # 通知消费者
+          print('Producer has notified the consumer.')
+  
+  
+  def consumer(cond):
+      # 先打印等待消息，然后在获取锁后调用 wait() 等待通知
+      print('Waiting for producer...')
+      with cond:  # 获取条件的锁
+          cond.wait()  # 等待生产者的通知
+          print('Consumer has been notified.')
+  
+  
+  if __name__ == "__main__":
+      condition = multiprocessing.Condition()
+  
+      # 创建并启动消费者进程
+      consumer_process = multiprocessing.Process(target=consumer, args=(condition,))
+      consumer_process.start()
+  
+      # 确保消费者先运行
+      time.sleep(1)
+  
+      # 创建并启动生产者进程
+      producer_process = multiprocessing.Process(target=producer, args=(condition,))
+      producer_process.start()
+  
+      # 等待两个进程完成
+      consumer_process.join()
+      producer_process.join()
+  
+  # 输出：
+  # Waiting for producer...
+  # Producing...
+  # Producer has notified the consumer.
+  # Consumer has been notified.  
+  ```
+
+  主进程先启动消费者，确保它在生产者之前等待。可以使用 time.sleep(1) 暂停一下，确保消费者先运行。
+
+* `Event`（事件）  
+  Event 用于在进程之间进行简单的信号传递，一个进程可以设置事件，其他进程可以等待该事件的发生。  
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(event):
+      print('Worker is waiting for event.')
+      event.wait()  # 等待事件
+      print('Worker is proceeding.')
+  
+  
+  if __name__ == "__main__":
+      event = multiprocessing.Event()
+      p = multiprocessing.Process(target=worker, args=(event,))
+      p.start()
+  
+      time.sleep(2)  # 模拟处理时间
+      event.set()  # 触发事件
+      print('Event has been set.')
+  
+      p.join()
+  ```
+  
+* `Barrier`    
+  Barrier 用于协调多个进程的执行，确保所有进程在到达某个点后一起继续执行。  
+  ```python
+  import multiprocessing
+  import time
+  
+  
+  def worker(barrier, id):
+      print(f'Process {id} is doing some work...')
+      time.sleep(2)  # 模拟工作
+      print(f'Process {id} has reached the barrier.')
+  
+      # 等待其他进程到达
+      barrier.wait()
+  
+      print(f'Process {id} is continuing after the barrier.')
+  
+  
+  if __name__ == "__main__":
+      num_processes = 3
+      barrier = multiprocessing.Barrier(num_processes)
+  
+      processes = []
+      for i in range(num_processes):
+          p = multiprocessing.Process(target=worker, args=(barrier, i))
+          processes.append(p)
+          p.start()
+  
+      for p in processes:
+          p.join()
+  ```
+
+  * 创建 Barrier：使用 multiprocessing.Barrier(num_processes) 创建一个 Barrier 对象，指定需要同步的进程数量；
+  * 工作函数： 每个进程执行 worker 函数，模拟一些工作，然后调用 barrier.wait()，在这里进程将会被阻塞，直到指定进程数都到达此点；
+  * 进程启动： 主进程创建并启动多个子进程，最后通过 join() 等待它们完成；
+
 ### 20.2 线程 (Thread)
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
