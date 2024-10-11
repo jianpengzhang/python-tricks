@@ -75,5 +75,5 @@
             * [20.1.3.3.1 multiprocessing.Manager()](docs/python_features.md#201331-multiprocessingmanager)
             * [20.1.3.3.2 自定义管理器](docs/python_features.md#201332-自定义管理器))
             * [20.1.3.3.3 使用远程管理器](docs/python_features.md#201333-使用远程管理器))
-          * [20.1.3.4 共享内存](docs/python_features.md#20134-共享内存)
+          * [20.1.3.4 共享 ctypes 对象](docs/python_features.md#20134-共享-ctypes-对象)
           * [20.1.3.5 同步原语](docs/python_features.md#20135-同步原语)
