@@ -78,3 +78,8 @@
           * [20.1.3.4 共享 ctypes 对象](docs/python_features.md#20134-共享-ctypes-对象)
           * [20.1.3.5 同步原语](docs/python_features.md#20135-同步原语)
           * [20.1.3.6 跨进程直接访问内存共享](docs/python_features.md#20135-跨进程直接访问内存共享)
+    * [20.2 线程 (Thread)](docs/python_features.md#202-线程-thread)
+        * [20.2.1 threading.Thread](docs/python_features.md#2021-threadingthread)
+        * [20.2.2 线程池](docs/python_features.md#2022-线程池)
+        * [20.2.3 GIL（Global Interpreter Lock，全局解释器锁）](docs/python_features.md#2023-gilglobal-interpreter-lock全局解释器锁)
+        * [20.2.4 线程同步](docs/python_features.md#2024-线程同步)

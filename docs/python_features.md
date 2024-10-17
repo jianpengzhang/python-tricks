@@ -5120,6 +5120,8 @@ if __name__ == "__main__":
 
 进程是操作系统分配资源的基本单位，每个进程拥有独立的内存空间。一个程序运行后至少会有一个主进程，主进程可以派生出多个子进程。
 
+参考：https://bbs.huaweicloud.com/blogs/289316
+
 **特点：**
 
 * 独立性：每个进程有自己独立的内存空间，不会与其他进程共享数据；
@@ -5278,6 +5280,8 @@ All processes finished
 
 #### 20.1.2 进程池 (Pool)
 
+#### 20.1.2.1 进程池 (multiprocessing.Pool)
+
 在 Python 中，multiprocessing.Pool 提供了一种简单的方式来管理进程池，以并发地执行任务。进程池允许你预先创建一组工作进程，并通过这些进程来执行多个任务，避免频繁地创建和销毁进程所带来的开销。Pool
 对象支持多种方法来分发任务，包括同步和异步方式。
 
@@ -5303,7 +5307,7 @@ if __name__ == '__main__':
 
 以下通过示例分别介绍 Pool 多种分发任务方式。
 
-#### 20.1.2.1 apply & apply_async
+#### 20.1.2.1.1 apply & apply_async
 
 创建进程池:
 
@@ -5493,7 +5497,7 @@ if __name__ == "__main__":
 * 同步调用：主进程在 apply 方法上会阻塞，直到任务完成，适用于不需要并行的简单任务；
 * 异步调用：主进程不会在 apply_async 方法上阻塞，而是继续执行后续代码，适用于需要并行处理的复杂任务；
 
-#### 20.1.2.2 map & map_async
+#### 20.1.2.1.2 map & map_async
 
 * `map(func, iterable, chunksize=None)`：同步调用，将 iterable 中的每一个元素作为参数，依次传递给函数
   func，以并行的方式计算，并返回结果列表。map 是阻塞的，即主进程会等待所有子进程完成。
@@ -5597,7 +5601,7 @@ if __name__ == "__main__":
 # Main process finished.
 ```
 
-#### 20.1.2.3 starmap & starmap_async
+#### 20.1.2.1.3 starmap & starmap_async
 
 * `starmap(func, iterable, chunksize=None)`：同步调用,类似于 map，但 iterable 中的元素是元组，它们会被拆包并作为多个参数传递给函数
   func;
@@ -5669,7 +5673,7 @@ if __name__ == '__main__':
 【重要提示】：callback 仅在所有任务成功完成时才会调用，而 error_callback 在任一任务失败时触发。因此，不能同时期望 callback 和
 error_callback 在同一批任务中都被调用。
 
-#### 20.1.2.4 总结
+#### 20.1.2.1.4 总结
 
 * 同步 vs 异步：
   * apply, map, starmap 是同步的，主进程会等待任务完成；
@@ -5683,6 +5687,9 @@ error_callback 在同一批任务中都被调用。
 回调函数：
 
 * 异步方法可以接受 callback 和 error_callback，处理任务成功或失败后的操作；
+
+#### 20.1.2.2 进程池 (concurrent.futures.ProcessPoolExecutor)
+  TODO
 
 #### 20.1.3 进程间通信（Inter-Process Communication, IPC）
 
@@ -8072,6 +8079,8 @@ ctypes 是 Python 的外部函数库，它提供了与 C 兼容的数据类型�
 
 线程是 CPU 调度的基本单位，一个进程可以包含多个线程，线程之间共享进程的内存空间。
 
+参考：https://bbs.huaweicloud.com/blogs/289314
+
 **特点：**
 
 * 轻量级：相比于进程，线程的创建和销毁成本较低；
@@ -8090,9 +8099,11 @@ ctypes 是 Python 的外部函数库，它提供了与 C 兼容的数据类型�
 
 ```python
 import threading
+import time
 
 
 def worker(num):
+    time.sleep(1)
     print(f'Worker: {num}')
 
 
@@ -8105,6 +8116,839 @@ for i in range(5):
 for t in threads:
     t.join()
 ```
+
+#### 20.2.1 threading.Thread
+
+`threading.Thread` 是 Python 中的线程类，用于创建和管理线程。通过指定参数，可以自定义线程的行为。
+
+```
+class threading.Thread(group=None, target=None, name=None, args=(), kwargs={}, *, daemon=None)
+```
+
+**参数介绍**  
+* `group`: 目前默认始终为 `None`，保留参数，保留给将来实现 ThreadGroup 类的扩展使用；
+* `target`: 线程执行目标函数（用于 run() 方法调用的可调用对象），默认是 None，表示不需要调用任何方法；
+* `name`: 线程名称，默认情况下，以 "Thread-N" 形式构造唯一名称，其中 N 为一个较小的十进制数值，或是 "Thread-N (target)" 的形式，其中 "target" 为 `target.__name__`（前提指定了 target 参数）；
+* `args`: 调用目标函数的参数列表或元组，默认为 `()`；
+* `kwargs`: 调用目标函数的关键字参数字典，默认是 `{}`；
+* `daemon`: 是否将线程设置为守护线程：守护线程在主线程结束时会被强制终止；非守护线程会让主线程等待它执行完。 默认值（None），线程将继承当前线程的守护模式属性（主线程默认是非守护线程），如果不是 None，daemon 参数将显式地设置该线程是否为守护模式。
+
+**常用方法**   
+
+* `start()`: 启动线程，调用 run() 方法（同一线程里最多只能被调用一次，否则抛出 RuntimeError），线程将在后台开始执行；
+* `run()`: 线程启动时调用的方法，可以在子类里重载该方法来定制线程执行的逻辑。如果指定了 target 参数，则默认调用 target(*args, **kwargs)；
+  ```
+  >>> from threading import Thread
+  >>> t = Thread(target=print, args=[1])
+  >>> t.run()
+  1
+  >>> t = Thread(target=print, args=(1,))
+  >>> t.run()
+  1
+  ```
+* `join(timeout=None)`: 阻塞当前线程，等待该线程终止，timeout 是可选的超时时间，指定秒数后超时返回；
+* `name`: 只用于识别的字符串，它没有语义，多个线程可以赋予相同的名称，初始名称由构造函数设置；  
+  `getName()`、`setName()` 3.10 版本弃用，改为直接以特征属性（name）方式使用它；
+  ```
+  >>> t = Thread(target=print,args=[1])
+  >>> t.name
+  'Thread-2 (print)'
+  >>> t.name='Thread-2 (print)-xxx'
+  >>> t.name
+  'Thread-2 (print)-xxx'
+  ```
+* `ident`: 线程的 '线程标识符'，如果线程尚未开始则为 None。它是一个非零的整数，它的值没有直接含义，主要是用作 magic cookie，比如作为含有线程相关数据的字典的索引。线程标识符可能会在线程退出，新线程创建时被复用；
+  ```
+  >>> t.ident
+  >>> t.start()
+  1
+  >>> t.ident
+  140461852206848
+  ```
+* `native_id`: 此线程的线程 ID (TID)，由 OS (内核) 分配。 这是一个非负整数，或者如果线程还未启动则为 None。它的值可被用来在整个系统中唯一地标识这个特定线程（直到线程终结，在那之后该值可能会被 OS 回收再利用）；
+  ```
+  >>> t.native_id
+  51645
+  ```
+* `is_alive()`: 返回线程是否存活。当 run() 方法刚开始直到 run() 方法刚结束，这个方法返回 True 。`threading.enumerate()` 返回当前所有存活的 Thread 对象的列表；
+* `daemon`: 布尔值，表示这个线程是否是一个守护线程（True）或不是（False）。 这个值必须在调用 start() 之前设置，否则会引发 RuntimeError 。它的初始值继承自创建线程，主线程不是一个守护线程，因此所有在主线程中创建的线程默认为 daemon = False （当没有存活的非守护线程时，整个Python程序才会退出）；
+  ```
+  >>> t.daemon
+  False
+  ```
+  `isDaemon()`、`setDaemon()`，自 3.10 版本弃用的 daemon 的取值/设值 API，改为直接以特征属性（daemon）方式使用它。
+
+**Thread 类示例**    
+
+* 示例 1: 使用 target、args 和 kwargs 参数  
+  创建两个线程，分别传递不同的参数给目标函数：  
+
+  ```
+  import threading
+  import time
+
+  def worker(message: str, delay: int):
+      """
+      线程执行目标函数
+      """
+      for _ in range(3):
+          # 返回当前对应调用者控制线程的 Thread 对象
+          print(f"{threading.current_thread().name}: {message}")
+          time.sleep(delay)
+   
+  if __name__ == '__main__':
+      # 创建 2 个线程
+      # 通过位置参数为 worker 函数传递 "Hello from Thread 1" 和延迟 1 秒
+      thread1 = threading.Thread(target=worker, args=("Hello from Thread 1", 1), name="worker-1")
+      # 通过关键字参数传递不同的参数
+      thread2 = threading.Thread(target=worker, kwargs={"message": "Hello from Thread 2", "delay": 2}, name="worker-2")
+  
+      # 启动线程
+      thread1.start()
+      thread2.start()
+  
+      # 等待线程结束
+      thread1.join()
+      thread2.join()
+  
+      print("Main thread finished.")
+  
+  # 输出：
+  # worker-1: Hello from Thread 1
+  # worker-2: Hello from Thread 2
+  # worker-1: Hello from Thread 1
+  # worker-2: Hello from Thread 2
+  # worker-1: Hello from Thread 1
+  # worker-2: Hello from Thread 2
+  # Main thread finished.  
+  ```
+
+* 示例 2: 自定义线程类   
+  继承 threading.Thread 类创建自定义线程类，重写 run() 方法： 
+  ```
+  import threading
+  import time
+  
+  
+  class CustomThread(threading.Thread):
+  
+      def __init__(self, name, delay):
+          super().__init__()
+          self.name = name
+          self.delay = delay
+  
+      def run(self):
+          """重载 run 方法，定义线程的执行逻辑"""
+          for i in range(3):
+              print(f"{self.name} is running. Count: {i}")
+              time.sleep(self.delay)
+  
+  
+  if __name__ == "__main__":
+      # 创建 2 个自定义线程
+      thread1 = CustomThread(name="Custom-Thread-1", delay=1)
+      thread2 = CustomThread(name="Custom-Thread-2", delay=2)
+  
+      # 启动线程
+      thread1.start()
+      thread2.start()
+  
+      # 等待线程结束
+      thread1.join()
+      thread2.join()
+  
+      print("Main thread finished.")
+  
+  # 输出：
+  # Custom-Thread-1 is running. Count: 0
+  # Custom-Thread-2 is running. Count: 0
+  # Custom-Thread-1 is running. Count: 1
+  # Custom-Thread-1 is running. Count: 2
+  # Custom-Thread-2 is running. Count: 1
+  # Custom-Thread-2 is running. Count: 2
+  # Main thread finished.  
+  ```
+  
+* 示例 3: 守护线程  
+  守护线程在主线程结束时会自动停止，不管它是否完成了它的任务：  
+  ```python
+  import threading
+  import time
+  
+  
+  def worker():
+      # 线程任务，死循环模拟守护线程
+      while True:
+          print(f"{threading.current_thread().name} running in the background")
+          time.sleep(1)
+  
+  
+  if __name__ == "__main__":
+      # 创建守护线程：daemon=True，将线程设置为守护线程
+      daemon_thread = threading.Thread(target=worker, name="", daemon=True)
+  
+      # 启动守护线程
+      daemon_thread.start()
+  
+      # 主线程等待 3 秒：守护线程会在主线程结束时自动停止，因此在主线程等待 3 秒后，守护线程也会自动结束
+      time.sleep(3)
+      print("Main thread finished.")
+  
+  # 输出：
+  # Thread-1 (worker) running in the background
+  # Thread-1 (worker) running in the background
+  # Thread-1 (worker) running in the background
+  # Main thread finished.  
+  ```
+
+* 示例 4: 非守护线程  
+  非守护线程的特点是主线程会等待所有非守护线程执行完毕后才会终止：
+
+  ```python
+  import threading
+  import time
+  
+  
+  def worker():
+      for i in range(5):
+          print(f"{threading.current_thread().name} task {i}\n")
+          time.sleep(1)
+  
+  
+  if __name__ == "__main__":
+      # 创建非守护线程
+      non_daemon_thread = threading.Thread(target=worker, name="Non-Daemon-Thread", daemon=False)
+  
+      # 启动非守护线程
+      non_daemon_thread.start()
+  
+      print("Main thread finished. Waiting for non-daemon thread to complete.\n")
+      non_daemon_thread.join()  # 主线程等待非守护线程结束
+      print("Non-daemon thread finished.\n")
+  
+  # 输出：
+  # Non-Daemon-Thread task 0
+  # Main thread finished. Waiting for non-daemon thread to complete.
+  # Non-Daemon-Thread task 1
+  # Non-Daemon-Thread task 2
+  # Non-Daemon-Thread task 3
+  # Non-Daemon-Thread task 4
+  # Non-daemon thread finished.
+  
+  # non_daemon_thread.join() 注释后输出：
+  # Non-Daemon-Thread task 0
+  # Main thread finished. Waiting for non-daemon thread to complete.
+  # Non-daemon thread finished.
+  # Non-Daemon-Thread task 1
+  # Non-Daemon-Thread task 2
+  # Non-Daemon-Thread task 3
+  # Non-Daemon-Thread task 4
+  ```
+
+#### 20.2.2 线程池
+Python 3  `concurrent.futures` 模块提供了一个 `ThreadPoolExecutor` 类，用于实现线程池。`ThreadPoolExecutor` 是 `Executor` 的子类，它使用线程池来异步执行调用。
+
+```
+class concurrent.futures.ThreadPoolExecutor(max_workers=None, thread_name_prefix='', initializer=None, initargs=())
+```
+
+不建议将 ThreadPoolExecutor 用于长期运行的任务：由于 ThreadPoolExecutor 会确保线程池中的所有线程在程序退出之前被合并，如果线程池中的任务是长期运行的（例如无限循环或长时间阻塞的任务），这可能会导致程序在退出时被卡住，因为它要等待这些长期运行的线程完成工作。因此，不建议将 ThreadPoolExecutor 用于长期运行的任务。如果你需要处理长期任务，应该使用其他的解决方案，比如守护线程（daemon threads），或者自己实现更复杂的线程管理机制，来确保程序能够在需要时正常退出，而不是等待长期运行的线程完成。
+
+* `max_workers`(可选)：指定线程池中最大的工作线程数量。如果提交的任务超过了这个数量，多余的任务会排队等待有空闲线程。
+   * 如果 max_workers 为 None 或没有指定，将默认为机器处理器的个数，假如 ThreadPoolExecutor 侧重于I/O操作而不是CPU运算，那么可以乘以 5 ，同时工作线程的数量可以比 ProcessPoolExecutor 的数量高；
+   * 在 3.8 版本: max_workers 的默认值已改为 min(32, os.cpu_count() + 4)。 这个默认值会保留至少 5 个工作线程用于 I/O 密集型任务。 对于那些释放了 GIL 的 CPU 密集型任务，它最多会使用 32 个 CPU 核心。这样能够避免在多核机器上不知不觉地使用大量资源；
+   * 在 3.13 版本: max_workers 的默认值已改为 min(32, (os.process_cpu_count() or 1) + 4)；
+* `thread_name_prefix (可选)`： 允许用户控制由线程池创建的 threading.Thread 工作线程名称以方便调试。如果不设置，线程名称会是类似 ThreadPoolExecutor-0_0 这样的格式；
+* `initializer (可选)`：每个线程启动时都会执行的初始化函数。这个函数会在每个线程开始处理任务前运行一次，常用于初始化线程特定的资源或环境（例如数据库连接、文件句柄等）；
+* `initargs (可选)`：传递给 initializer 函数的参数，作为一个元组传入，默认 `()`；
+
+**ThreadPoolExecutor 常用方法**  
+
+`ThreadPoolExecutor` 是 `Executor` 的子类，Executor 抽象类提供异步执行调用方法，要通过它的子类调用，即 `ThreadPoolExecutor` 常用方法：
+
+* `submit(fn, /, *args, **kwargs)`：向线程池提交一个可调用对象（函数:），并立即返回一个 Future 对象，通过 Future 对象可以获取任务的执行结果；
+  ```
+  with ThreadPoolExecutor(max_workers=1) as executor:
+    future = executor.submit(pow, 323, 1235)
+    print(future.result())
+  ```
+* `map(fn, *iterables, timeout=None, chunksize=1)`：将 function 应用于 iterable 的每一项，并产生其结果的迭代器，timeout 超时时间（可以是整数或浮点数），如果 timeout 未指定或为 None，则不限制等待时间； 
+* `shutdown(wait=True, *, cancel_futures=False)`： 停止线程池的工作；
+   * wait=True：则此方法只有在所有待执行的 future 对象完成执行且释放已分配的资源后才会返回；
+   * wait=False：方法立即返回，所有待执行的 future 对象完成执行后会释放已分配的资源。不管 wait 的值是什么，整个 Python 程序将等到所有待执行的 future 对象完成执行后才退出；
+   * cancel_futures=True：此方法将取消所有执行器还未开始运行的挂起的 Future。无论 cancel_futures 的值是什么，任何已完成或正在运行的 Future 都不会被取消；
+   * cancel_futures=True，wait=True：已开始运行的所有 Future 将在此方法返回之前完成。 其余的 Future 会被取消；
+   * 如果使用 with 语句，可以避免显式调用这个方法，它将会停止 Executor (就好像 Executor.shutdown() 调用时 wait 设为 True 一样等待)：
+     ```
+     import shutil
+     with ThreadPoolExecutor(max_workers=4) as e:
+         e.submit(shutil.copy, 'src1.txt', 'dest1.txt')
+         e.submit(shutil.copy, 'src2.txt', 'dest2.txt')
+         e.submit(shutil.copy, 'src3.txt', 'dest3.txt')
+         e.submit(shutil.copy, 'src4.txt', 'dest4.txt')
+     ```
+
+【注意】：死锁
+当可调用对象已关联了一个 Future 然后在等待另一个 Future 的结果，会导致死锁情况，例如:
+
+```python
+import time
+# 线程池
+from concurrent.futures import ThreadPoolExecutor
+
+def wait_on_b():
+    time.sleep(5)
+    print(b.result())  # b 永远不会结束因为它在等待 a。
+    return 5
+
+def wait_on_a():
+    time.sleep(5)
+    print(a.result())  # a 永远不会结束因为它在等待 b。
+    return 6
+
+executor = ThreadPoolExecutor(max_workers=2)
+a = executor.submit(wait_on_b)
+
+# 或者
+
+def wait_on_future():
+    f = executor.submit(pow, 5, 2)
+    # 这将永远不会完成因为只有一个工作线程
+    # 并且它正在执行此函数。
+    print(f.result())
+
+
+executor = ThreadPoolExecutor(max_workers=1)
+future = executor.submit(wait_on_future)
+result = future.result()
+print(result)
+```
+
+**示例：**  
+* 示例 1：使用 submit() 提交单个任务  
+  ```python
+  import time
+  from concurrent.futures import ThreadPoolExecutor
+  
+  
+  def task(name):
+      print(f"Task {name} is running")
+      time.sleep(2)
+      return f"Task {name} completed"
+  
+  
+  if __name__ == '__main__':
+      with ThreadPoolExecutor(max_workers=3) as executor:
+          future = executor.submit(task, 'jpzhang')  # 向线程池提交任务并立即返回 Future 对象
+          result = future.result()  # 阻塞等待任务执行完成并获取结果
+          print(result)
+  ```  
+
+* 示例 2：使用 map() 并行处理多个任务  
+
+  ```python
+  import time
+  from concurrent.futures import ThreadPoolExecutor
+  
+  
+  def task(n):
+      print(f"Processing {n}")
+      time.sleep(1)
+      return n * n
+  
+  
+  if __name__ == '__main__':
+      # 创建线程池
+      with ThreadPoolExecutor(max_workers=3) as executor:
+          nums = [1, 2, 3, 4, 5]
+          results = executor.map(task, nums)  # 并行处理多个任务
+          for result in results:
+              print(result)
+  
+  # 输出：
+  # Processing 1
+  # Processing 2
+  # Processing 3
+  # Processing 4
+  # 1Processing 5
+  #
+  # 4
+  # 9
+  # 16
+  # 25
+  ```
+  * `executor.map(task, nums)` 对列表 nums 中的每个元素都并行执行了 task() 函数，结果是平方数的迭代器；
+  * `map()` 方法返回的是一个结果迭代器，可以使用 for 循环遍历； 
+
+* 示例 3：处理多个异步任务并等待完成  
+  ```python
+  import time
+  from concurrent.futures import ThreadPoolExecutor, as_completed
+  
+  
+  def task(name):
+      print(f"Task {name} is running")
+      time.sleep(2)
+      return f"Task {name} completed"
+  
+  
+  if __name__ == '__main__':
+      # 创建线程池
+      with ThreadPoolExecutor(max_workers=3) as executor:
+          # 提交多个任务
+          tasks = [executor.submit(task, f"Task-{i}") for i in range(5)]
+          for future in as_completed(tasks):  # 等待每个任务完成
+              print(future.result())  # 获取每个任务的结果
+  
+  # 输出：
+  # Task Task-0 is running
+  # Task Task-1 is running
+  # Task Task-2 is running
+  # Task Task-3 is running
+  # Task Task-0 completed
+  # Task Task-4 is running
+  # Task Task-1 completed
+  # Task Task-2 completed
+  # Task Task-3 completed
+  # Task Task-4 completed
+  ```
+  * executor.submit(task, ...) 提交了多个任务；
+  * as_completed() 返回一个迭代器，在每个任务完成时会返回 Future 对象；
+  * future.result() 用于获取每个任务的执行结果；
+
+* 示例 4：线程池中的异常处理  
+  当任务执行过程中抛出异常时，submit() 返回的 Future 对象可以捕获这些异常。
+
+  ```python
+  from concurrent.futures import ThreadPoolExecutor
+  
+  
+  def task(num):
+      if num == 2:
+          raise ValueError("Task encountered an error!")
+      return num * num
+  
+  
+  if __name__ == "__main__":
+      with ThreadPoolExecutor(max_workers=3) as executor:
+          futures = [executor.submit(task, i) for i in range(5)]
+          for future in futures:
+              try:
+                  print(future.result())
+              except Exception as e:
+                  print(f"Task raised an exception: {e}")
+  
+  # 输出:
+  # 0
+  # 1
+  # Task raised an exception: Task encountered an error!
+  # 9
+  # 16
+  ```
+  * 当 task(2) 抛出异常时，future.result() 会捕获并抛出该异常，可以在 try-except 块中处理。
+
+* 示例 5：手动关闭线程池  
+
+  ```python
+  import time
+  from concurrent.futures import ThreadPoolExecutor
+  
+  
+  def task(name):
+      print(f"Task {name} is running")
+      time.sleep(1)
+      return f"Task {name} completed"
+  
+  
+  if __name__ == "__main__":
+      # 创建线程池
+      executor = ThreadPoolExecutor(max_workers=3)
+      futures = [executor.submit(task, f"Task-{i}") for i in range(5)]
+  
+      # 手动关闭线程池
+      executor.shutdown(wait=True)  # 等待所有任务完成
+      print("All tasks completed!")
+  
+  # 输出：
+  # Task Task-0 is running
+  # Task Task-1 is running
+  # Task Task-2 is running
+  # Task Task-3 is running
+  # Task Task-4 is running
+  # All tasks completed!
+  
+  # executor.shutdown(wait=False) ，立即返回
+  # Task Task-0 is running
+  # Task Task-1 is running
+  # Task Task-2 is runningAll tasks completed!
+  #
+  # Task Task-3 is running
+  # Task Task-4 is running
+  ```
+  * executor.shutdown() 关闭线程池，并等待所有提交的任务完成。
+  * wait=True 表示调用 shutdown() 后会阻塞，直到所有任务完成，否则，立即返回，任务依旧会继续完成。
+
+* 示例 6：
+  ```python
+  import concurrent.futures
+  import urllib.request
+  
+  URLS = ['http://www.foxnews.com/',
+          'http://www.cnn.com/',
+          'http://europe.wsj.com/',
+          'http://www.bbc.co.uk/',
+          'http://nonexistant-subdomain.python.org/']
+  
+  # 获取一个页面并报告其 URL 和内容
+  def load_url(url, timeout):
+      with urllib.request.urlopen(url, timeout=timeout) as conn:
+          return conn.read()
+  
+  # 我们可以使用一个 with 语句来确保线程被迅速清理
+  with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+      # 开始加载操作并以每个 Future 对象的 URL 对其进行标记
+      future_to_url = {executor.submit(load_url, url, 60): url for url in URLS}
+      for future in concurrent.futures.as_completed(future_to_url):
+          url = future_to_url[future]
+          try:
+              data = future.result()
+          except Exception as exc:
+              print('%r generated an exception: %s' % (url, exc))
+          else:
+              print('%r page is %d bytes' % (url, len(data)))
+  ```
+
+#### 20.2.3 GIL（Global Interpreter Lock，全局解释器锁）
+
+在 Python 3 中的多线程主要是并发而不是并行，特别是在使用标准的 CPython 解释器时。这主要是由于“全局解释器锁（GIL）”的存在。
+
+参考：https://zhuanlan.zhihu.com/p/75780308
+
+**GIL（Global Interpreter Lock， 全局解释器锁）**
+  * **什么是 GIL？** GIL 是 CPython 解释器中的一个机制，用于保证同一时间只有一个线程执行 Python 字节码。它使得 Python 的多线程在处理 CPU 密集型任务时不能真正实现并行。
+  * **影响**：即便系统有多个 CPU 核心，Python 多线程在执行 Python 代码时仍然只能同时运行一个线程（这是因为 GIL 会让每个线程轮流获取执行权限）。这导致了多线程在 CPython 中无法充分利用多核 CPU 进行并行计算，而更多地表现为并发。
+
+**并发 vs 并行**
+  * **并发**：并发指的是多个任务在同一时间段内交替进行执行。在一个多线程环境中，线程轮流获取 CPU 时间片执行任务，给人一种同时执行的错觉。CPython 中的多线程是这种情况，尤其是在 CPU 密集型任务中。
+  * **并行**：并行指的是多个任务在同一时刻真正同时执行，通常依赖于多核 CPU 来并行处理多个任务。在 Python 中，要真正实现并行的计算，一般使用多进程（如 multiprocessing 模块）而不是多线程。
+
+**多线程的适用场景**
+  虽然 GIL 限制了 Python 多线程的并行能力，但在某些场景下，多线程仍然非常有用：
+  * I/O 密集型任务：例如网络请求、文件 I/O 等操作。在这些任务中，线程会等待外部资源的响应，而不需要大量 CPU 计算，因此在等待期间可以切换到其他线程进行工作，充分提高程序的执行效率。
+  * 轻量级的任务切换：通过多线程实现任务的交替执行，尤其适合处理大量短小的任务。
+
+**如何实现真正的并行**
+  如果程序需要真正的并行计算（特别是在 CPU 密集型任务中），通常有以下几个选择：
+  * 使用 multiprocessing 模块：这个模块允许创建多个进程，每个进程拥有自己的 GIL，因此可以充分利用多核 CPU 进行并行计算。
+  * 使用 C 扩展模块：对于需要高性能的部分，可以使用 C/C++ 编写扩展模块，然后通过 Python 调用。GIL 对非 Python 代码不生效，因此可以通过这种方式实现并行。
+  * 使用 concurrent.futures.ProcessPoolExecutor：这个工具通过多进程来实现真正的并行，适合需要执行大量 CPU 密集型任务的场景。
+
+#### 20.2.4 线程同步
+多个线程共享资源或数据，如果没有合理的同步机制，可能会导致数据竞争、死锁等问题。因此，线程同步是确保多个线程安全地访问共享资源的关键。
+
+#### 20.2.4.1 Lock (锁) 
+`Lock` 是最简单的一种锁机制，表示一个互斥锁。锁的状态可以是“锁定”或“非锁定”。当一个线程获取锁时，其他线程必须等待该线程释放锁才能获取它。这可以确保只有一个线程可以访问共享资源，从而避免竞争条件。
+
+```
+class threading.Lock
+```
+锁对象类，一旦一个线程获得一个锁，会阻塞随后尝试获得锁的线程，直到它被释放，任何线程都可以释放它。  
+
+【备注】   
+* Lock 锁支持上下文管理协议，因此推荐使用 with 而不是手动调用 acquire() 和 release() 来针对一个代码块处理锁的获取和释放。  
+* 在 3.13 版本发生变更: 现在 Lock 是一个类。 在更早的 Python 版本中，Lock 是一个返回下层私有锁类型的实例的工厂函数。  
+
+**基础方法：**  
+* `acquire(blocking=True, timeout=-1)`：阻塞或非阻塞获得锁。
+  * blocking=True（默认值），阻塞直到锁被释放，然后将锁锁定并返回 True；
+  * blocking=False，非阻塞，如果调用时锁未释放，则立即返回 False；否则，将锁锁定并返回 True；
+  * timeout：阻塞超时时间，超时未获得锁则返回 False，-1 无限制；
+* `release()`：释放一个锁，这个方法可以在任何线程中调用，不单指获得锁的线程；
+* `locked()`：当锁被获取时，返回 True；
+
+**示例 1：`acquire`/`release`**
+```python
+import threading
+import time
+
+# 共享资源
+counter = 0
+lock = threading.Lock()
+
+
+def increment_counter():
+    global counter
+    # 获取锁
+    lock.acquire()
+    try:
+        local_counter = counter
+        time.sleep(0.1)  # 模拟其他操作
+        local_counter += 1
+        counter = local_counter
+    finally:
+        # 释放锁,任务出错，锁也能被释放，防止死锁
+        lock.release()
+
+
+if __name__ == "__main__":
+    # 创建线程
+    threads = []
+    for i in range(5):
+        thread = threading.Thread(target=increment_counter)
+        threads.append(thread)
+        thread.start()
+
+    # 等待所有线程完成
+    for thread in threads:
+        thread.join()
+
+    print(f"Final counter value: {counter}")
+
+# 输出：
+# Final counter value: 5
+```
+
+**示例 2：`with`**
+```
+import threading
+
+lock = threading.Lock()
+counter = 0
+
+def task():
+    global counter
+    with lock:  # 使用 with 自动获取和释放锁
+        local_counter = counter
+        local_counter += 1
+        counter = local_counter
+        print(f"Counter value: {counter}")
+
+if __name__ == "__main__":
+    threads = []
+    for _ in range(5):
+        t = threading.Thread(target=task)
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    print(f"Final counter value: {counter}")
+
+# 输出：
+# Counter value: 1
+# Counter value: 2
+# Counter value: 3
+# Counter value: 4
+# Counter value: 5
+# Final counter value: 5
+```
+
+#### 20.2.4.2 RLock (递归锁)
+RLock 表示可重入锁（reentrant lock），允许同一个线程多次获取同一把锁而不会导致死锁。每次 RLock.acquire() 的调用必须匹配一次 RLock.release()，只有在所有的锁定请求都被释放后，锁才会被真正释放（在 “锁定/非锁定” 状态上附加了 "所属线程" 和 "递归等级" 的概念）。
+
+```
+class threading.RLock
+```
+此类实现了重入锁对象，重入锁必须由获取它的线程释放，一旦线程获得了重入锁，同一个线程再次获取它将不阻塞；需要注意的是 RLock 其实是一个工厂函数，返回平台支持的具体递归锁类中最有效的版本的实例。
+
+【备注】   
+* RLock 锁支持上下文管理协议，因此推荐使用 with 而不是手动调用 acquire() 和 release() 来针对一个代码块处理锁的获取和释放。
+
+**基础方法：**  
+* `acquire(blocking=True, timeout=-1)`：阻塞或非阻塞获得锁。
+  * blocking = True (默认值): 
+    * 如无任何线程持有锁，则获取锁并立即返回；
+    * 如有其他线程持有锁，则阻塞执行直至能够获取锁，或直至 timeout，如果将其设为一个正浮点数值的话；
+    * 如同一线程持有锁，则再次获取该锁，并立即返回。 这是 Lock 和 RLock 之间的区别；Lock 将以与之前相同的方式处理此情况，即阻塞执行直至能够获取锁；
+  * blocking = False：
+    * 如无任何线程持有锁，则获取锁并立即返回；
+    * 如有其他线程持有锁，则立即返回；
+    * 如同一线程持有锁，则再次获取该锁并立即返回；
+
+如果被多次调用，则未能调用相同次数的 release() 可能导致死锁。考虑将 RLock 用作上下文管理器而不是直接调用 acquire/release。
+* `release()`: 释放锁，自减递归等级。如果减到零，则将锁重置为非锁定状态(不被任何线程拥有)，并且，如果其他线程正被阻塞着等待锁被解锁，则仅允许其中一个线程获得锁。如果自减后，递归等级仍然不是零，则锁保持锁定，仍由调用线程拥有。只有在调用方线程持有锁时才能调用此方法。如果在未获取锁的情况下调用此方法则会引发 RuntimeError。
+
+**示例 1：`acquire`/`release`**
+```python
+import threading
+import time
+# 共享资源
+counter = 0
+rlock = threading.RLock()
+
+
+def increment():
+    global counter
+    rlock.acquire()
+    try:
+        local_counter = counter
+        time.sleep(0.1)
+        local_counter += 1
+        counter = local_counter
+    finally:
+        rlock.release()
+
+
+def increment_counter():
+    global counter
+    # 使用 RLock
+    rlock.acquire()
+    try:
+        increment()  # 递归调用
+    finally:
+        rlock.release()
+
+
+if __name__ == "__main__":
+    # 创建线程
+    threads = []
+    for i in range(5):
+        thread = threading.Thread(target=increment_counter)
+        threads.append(thread)
+        thread.start()
+
+    # 等待所有线程完成
+    for thread in threads:
+        thread.join()
+
+    print(f"Final counter value: {counter}")
+
+# 输出：
+# Final counter value: 5
+```
+
+**示例 2：`with`**
+```python
+import threading
+
+lock = threading.Lock()
+counter = 0
+
+def task():
+    global counter
+    with lock:  # 使用 with 自动获取和释放锁
+        local_counter = counter
+        local_counter += 1
+        counter = local_counter
+        print(f"Counter value: {counter}")
+
+if __name__ == "__main__":
+    threads = []
+    for _ in range(5):
+        t = threading.Thread(target=task)
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    print(f"Final counter value: {counter}")
+
+# 输出：
+# Counter value: 1
+# Counter value: 2
+# Counter value: 3
+# Counter value: 4
+# Counter value: 5
+# Final counter value: 5
+```
+
+**`Lock` 与 `RLock` 的区别**  
+
+| 特性                  | `Lock`                              | `RLock`                           |
+|-----------------------|--------------------------------------|------------------------------------|
+| 获取锁                | 只能获取一次，必须释放后才能再次获取 | 可以多次获取，适用于递归调用       |
+| 适用场景              | 简单互斥操作                         | 复杂递归或重复锁定的场景           |
+| 是否支持多次获取      | 否                                   | 是                                |
+| 获取锁行为            | `acquire()` 和 `release()` 必须一一对应 | 每次调用 `acquire()` 后可多次调用 `release()` |
+
+#### 20.2.4.3 Condition (条件对象)
+`threading.Condition` 是 Python 中用于线程同步的条件变量，常用于多个线程之间协调某个共享资源的访问。通过 Condition，线程可以等待某个条件的发生，直到另一个线程通知它们该条件已被满足，线程才会继续执行。这通常用于生产者-消费者模型或类似的并发模式。
+
+```
+class threading.Condition(lock=None)
+```
+* `lock`: 一个可选的锁（如 Lock 或 RLock）对象。如果不指定，Condition 会内部创建一个 RLock 作为锁对象。
+
+Condition 对象结合了锁机制和条件变量的功能，使用时它必须与锁结合。当线程需要等待某个条件时，它首先会获取锁，然后调用 wait() 方法挂起自己，释放锁，直到其他线程调用 notify() 或 notify_all() 来通知它条件已经满足。
+
+**常用方法**
+* wait(timeout=None): 当前线程等待，直到其他线程通知条件变量，或直到可选的 timeout 时间结束为止。调用 wait() 时，线程会释放锁，并在被唤醒或超时后重新获得锁。
+* wait_for(predicate, timeout=None)：等待特定条件（predicate: 可调用对象而且它的返回值可被解释为一个布尔值）为 True。它提供了比 wait() 更加智能的等待机制，可以通过一个条件函数（predicate）来判断是否满足条件，而不是单纯依赖于外部 notify() 信号。
+* notify(n=1): 通知等待条件的线程，默认唤醒一个线程。如果 n 大于 1，则唤醒指定数量的线程。只有在持有锁的情况下才能调用。如果没有线程在等待，这是一个空操作。
+* notify_all(): 唤醒所有等待该条件的线程。
+* acquire(), release(): 获取和释放与条件关联的锁，通常在使用 with 语句时自动处理锁的获取和释放。
+
+**示例：** 生产者-消费者  
+
+```python
+import threading
+import time
+
+class ProducerConsumer:
+    def __init__(self):
+        self.items = []  # 用于存储共享数据
+        self.condition = threading.Condition()  # 创建条件变量
+        self.producer_done = False  # 标志生产者是否完成
+
+    def producer(self):
+        for i in range(1, 6):
+            with self.condition:  # 每次生产商品时获取条件的锁
+                print(f"Producing item {i}")
+                self.items.append(i)  # 生产一个商品
+                self.condition.notify_all()  # 通知消费者有新商品
+            time.sleep(0.5)  # 模拟生产过程
+        # 生产完成，标记生产者已完成
+        with self.condition:
+            self.producer_done = True
+            self.condition.notify_all()  # 通知所有消费者，生产结束
+
+    def consumer(self):
+        while True:
+            with self.condition:
+                # 消费者线程被唤醒后，检查是否有商品可消费
+                while not self.items and not self.producer_done:  # 如果 items 为空，等待生产者通知
+                    print(f"{threading.current_thread().name} - No items to consume, waiting...")
+                    self.condition.wait()  # 等待被生产者唤醒
+                if not self.items and self.producer_done:  # 生产者完成且没有商品可消费
+                    print(f"{threading.current_thread().name} - All items consumed, exiting...")
+                    break
+                # 消费商品
+                item = self.items.pop(0)
+                print(f"{threading.current_thread().name} - Consumed item {item}")
+            # 这里消费完商品后，已经释放锁，再进行模拟消费的延时
+            time.sleep(0.1)  # 模拟消费过程
+
+if __name__ == "__main__":
+    pc = ProducerConsumer()
+
+    # 创建多个消费者线程
+    consumers = [threading.Thread(target=pc.consumer, name=f"Consumer-{i+1}") for i in range(2)]
+
+    # 创建一个生产者线程
+    producer_thread = threading.Thread(target=pc.producer)
+
+    # 启动所有消费者线程
+    for consumer in consumers:
+        consumer.start()
+
+    time.sleep(0.5)  # 让消费者先启动，模拟现实中的消费等待
+    producer_thread.start()
+
+    # 等待所有线程结束
+    producer_thread.join()
+    for consumer in consumers:
+        consumer.join()
+```
+
+#### 20.2.4.4 信号量对象
+
+#### 20.2.4.4 事件对象
+
+定时器对象
+
+栅栏对象
 
 ### 20.3 协程 (Coroutine)
 
