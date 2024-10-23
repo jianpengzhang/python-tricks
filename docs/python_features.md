@@ -8646,7 +8646,7 @@ print(result)
 #### 20.2.4 线程同步
 多个线程共享资源或数据，如果没有合理的同步机制，可能会导致数据竞争、死锁等问题。因此，线程同步是确保多个线程安全地访问共享资源的关键。
 
-#### 20.2.4.1 Lock (锁) 
+#### 20.2.4.1 Lock (锁)
 `Lock` 是最简单的一种锁机制，表示一个互斥锁。锁的状态可以是“锁定”或“非锁定”。当一个线程获取锁时，其他线程必须等待该线程释放锁才能获取它。这可以确保只有一个线程可以访问共享资源，从而避免竞争条件。
 
 ```
@@ -8879,8 +8879,28 @@ Condition 对象结合了锁机制和条件变量的功能，使用时它必须�
 * notify(n=1): 通知等待条件的线程，默认唤醒一个线程。如果 n 大于 1，则唤醒指定数量的线程。只有在持有锁的情况下才能调用。如果没有线程在等待，这是一个空操作。
 * notify_all(): 唤醒所有等待该条件的线程。
 * acquire(), release(): 获取和释放与条件关联的锁，通常在使用 with 语句时自动处理锁的获取和释放。
-
-**示例：** 生产者-消费者  
+* 代码片段：
+  ```
+  # 消费一个条目
+  with cv:
+      while not an_item_is_available():
+          cv.wait()
+      get_an_available_item()
+  
+  # 生产一个条目
+  with cv:
+      make_an_item_available()
+      cv.notify()
+  ```
+  wait_for()：  
+  ```
+  # 消费一个条目
+  with cv:
+      cv.wait_for(an_item_is_available)
+      get_an_available_item()
+  ```
+  
+**完整示例：** 生产者-消费者  
 
 ```python
 import threading
@@ -8942,13 +8962,384 @@ if __name__ == "__main__":
         consumer.join()
 ```
 
-#### 20.2.4.4 信号量对象
+使用 while 循环检查所要求的条件成立与否是有必要的，因为 wait() 方法可能要经过不确定长度的时间后才会返回，而此时导致 notify() 方法调用的那个条件可能已经不再成立。这是多线程编程所固有的问题。 wait_for() 方法可自动化条件检查，并简化超时计算。
 
-#### 20.2.4.4 事件对象
+`wait_for()`：示例    
 
-定时器对象
+```
+import threading
+import time
 
-栅栏对象
+
+class ProducerConsumer:
+    def __init__(self):
+        self.items = []  # 共享资源列表
+        self.condition = threading.Condition()
+
+    def producer(self):
+        with self.condition:
+            for i in range(1, 6):
+                print(f"Producing item {i}")
+                self.items.append(i)  # 生产物品
+                self.condition.notify()  # 通知消费者
+                time.sleep(1)
+
+    def consumer(self):
+        def item_available():  # 谓词函数：检测 items 是否有元素
+            return len(self.items) > 0
+
+        
+        with self.condition:
+            self.condition.wait_for(item_available)  # 等待 items 不为空
+            item = self.items.pop(0)  # 消费物品
+            print(f"Consumed item {item}")
+
+
+if __name__ == "__main__":
+    pc = ProducerConsumer()
+
+    # 创建消费者线程
+    consumer_thread = threading.Thread(target=pc.consumer)
+    # 创建生产者线程
+    producer_thread = threading.Thread(target=pc.producer)
+
+    consumer_thread.start()
+    time.sleep(0.5)  # 模拟消费者等待
+    producer_thread.start()
+
+    consumer_thread.join()
+    producer_thread.join()
+```
+
+#### 20.2.4.4 Semaphore (信号量对象)
+Semaphore 用于控制同时进行的线程数量，确保资源不会被超过设定数量的线程同时使用。一个信号量管理一个内部计数器，该计数器因 acquire() 方法的调用而递减，因 release() 方法的调用而递增。 计数器的值永远不会小于零；当 acquire() 方法发现计数器为零时，将会阻塞，直到其它线程调用 release() 方法。
+
+```
+class threading.Semaphore(value=1)
+```
+
+* Semaphore 是信号量的一个实现，用于保护有限资源，防止多个线程同时访问，或者限制某个代码段的并发执行数量；
+* 参数 value: 代表信号量的初始值。value 的默认值为 1，意味着它像一个互斥锁（mutex）一样，仅允许一个线程访问资源。如果设置为大于 1 的值，则表示可以有多个线程同时访问受保护的资源。当 value 为 0 时，表示完全阻塞，所有线程需要等待信号量的释放才能继续执行；
+* 信号量对象也支持上下文管理协议（with）；
+
+**示例**
+信号量通常用于保护数量有限的资源，例如数据库服务器。在资源数量固定的任何情况下，都应该使用有界信号量。在生成任何工作线程前，应该在主线程中初始化信号量。
+
+```
+maxconnections = 5
+# ...
+pool_sema = BoundedSemaphore(value=maxconnections)
+```
+
+工作线程生成后，当需要连接服务器时，这些线程将调用信号量的 acquire 和 release 方法：
+
+```
+with pool_sema:
+    conn = connectdb()
+    try:
+        # ... 使用连接 ...
+    finally:
+        conn.close()
+```
+
+使用 Semaphore 控制最多允许 3 个线程同时访问一个共享资源：  
+
+```
+import threading
+import time
+
+semaphore = threading.Semaphore(2)
+
+def access_resource():
+    with semaphore:
+        print(f"{threading.current_thread().name} accessing resource.")
+        time.sleep(2)
+
+threads = []
+for i in range(4):
+    t = threading.Thread(target=access_resource)
+    threads.append(t)
+    t.start()
+
+for t in threads:
+    t.join()
+```
+
+#### 20.2.4.5 Event (事件对象)
+
+Event 对象通过内部的一个布尔标志来实现线程间的协调和通信，当布尔标志为 True 时，所有等待的线程都会被唤醒；当布尔标志为 False 时，所有等待的线程都会被阻塞。   
+
+`class threading.Event`：实现事件对象的类。事件对象管理一个内部标识，调用 set() 方法可将其设置为true。调用 clear() 方法可将其设置为 false 。调用 wait() 方法将进入阻塞直到标识为true。这个标识初始时为 false 。
+
+**主要方法**  
+* `set()`：将内部的标志设为 True，表示事件发生，并唤醒所有等待此事件的线程；
+* `clear()`：将内部的标志重置为 False，使得后续调用 wait() 的线程进入等待状态；
+* `is_set()`：返回内部标志的状态，如果标志为 True 则返回 True，否则返回 False；
+* `wait(timeout=None)`：阻塞当前线程，直到内部标志为 True 时唤醒线程。如果设置了 timeout 参数，线程会等待指定的秒数，如果超时还没有被唤醒，则返回 False；
+
+**工作流程**  
+* 当 Event 对象的内部标志为 False 时，调用 wait() 的线程会被阻塞，直到其他线程调用 set() 方法将标志设为 True；
+* 一旦标志被设为 True，所有调用 wait() 的线程都会被唤醒，并可以继续执行；
+
+**示例**  
+
+示例 1：生产者与消费者之间的事件同步
+
+````python
+import threading
+import time
+
+# 创建一个事件对象
+event = threading.Event()
+
+def producer():
+    print("Producer is working...")
+    time.sleep(3)  # 模拟生产过程
+    print("Producer has produced an item!")
+    event.set()  # 生产完成，触发事件
+
+def consumer():
+    print("Consumer is waiting for an item...")
+    event.wait()  # 等待事件被触发
+    print("Consumer has consumed the item!")
+
+if __name__ == "__main__":
+    # 创建生产者线程和消费者线程
+    producer_thread = threading.Thread(target=producer)
+    consumer_thread = threading.Thread(target=consumer)
+
+    # 启动线程
+    consumer_thread.start()
+    producer_thread.start()
+
+    # 等待线程结束
+    producer_thread.join()
+    consumer_thread.join()
+
+    print("All done!")
+
+# 输出：
+# Consumer is waiting for an item...
+# Producer is working...
+# Producer has produced an item!
+# Consumer has consumed the item!
+# All done!
+````
+
+* 消费者线程首先调用 event.wait()，进入等待状态；
+* 生产者线程经过 3 秒钟后，调用 event.set()，将事件标志设为 True，这时消费者线程被唤醒并继续执行；
+* 生产者和消费者同步完成后，程序正常退出；
+
+示例 2：定时触发的事件
+
+```python
+import threading
+import time
+
+# 创建事件对象
+event = threading.Event()
+
+
+def worker():
+    while not event.is_set():
+        # 每隔 2 秒检查一次事件是否已触发
+        print("Waiting for the event to be set...")
+        event.wait(2)
+    print("Event has been set, continuing work...")
+
+
+def trigger_event():
+    time.sleep(5)
+    print("Setting the event...")
+    event.set()
+
+
+if __name__ == "__main__":
+    # 启动工作线程
+    worker_thread = threading.Thread(target=worker)
+    worker_thread.start()
+
+    # 启动触发事件的线程
+    trigger_thread = threading.Thread(target=trigger_event)
+    trigger_thread.start()
+
+    # 等待所有线程结束
+    worker_thread.join()
+    trigger_thread.join()
+
+# 输出：
+# Waiting for the event to be set...
+# Waiting for the event to be set...
+# Waiting for the event to be set...
+# Setting the event...
+# Event has been set, continuing work...
+```
+
+#### 20.2.4.6 Timer (定时器对象)
+
+线程定时器对象 (threading.Timer) 是 threading 模块中的一种高级线程工具，专门用于在特定的时间后执行某个操作。Timer 类继承自 Thread 类，本质上是一个延时启动的线程，允许在指定时间间隔后调用某个函数。
+
+`class threading.Timer(interval, function, args=None, kwargs=None)`：创建一个定时器，经过 “interval” 秒的间隔时间后，将会用参数 “args” 和关键字参数 “kwargs” 调用 “function”。如果 “args” 为 “None” （默认值），则会使用一个空列表。如果 “kwargs” 为 “None” （默认值），则会使用一个空字典。
+
+例如：  
+
+```
+def hello():
+    print("hello, world")
+
+t = Timer(30.0, hello)
+t.start()  # 30 秒之后，将打印 "hello, world"
+```
+
+**方法：**  
+
+* start(): 启动定时器，开始倒计时，倒计时结束后执行目标函数；
+* cancel(): 如果定时器仍在倒计时中，调用此方法可以取消定时器，避免目标函数的执行；
+
+**示例：**  
+```python
+import threading
+import time
+
+
+def worker(name, message):
+    print(f"Hello, {name}! {message}")
+
+
+if __name__ == '__main__':
+    # 创建一个 3 秒后执行的定时器，并传递参数
+    timer = threading.Timer(3, worker, args=("Alice", "How are you today?"))
+
+    print("Timer started!")
+    timer.start()  # 启动定时器
+
+    # 继续执行主线程中的任务
+    for i in range(5):
+        print(f"Main thread working... {i + 1}")
+        time.sleep(1)
+
+# 输出：
+# Timer started!
+# Main thread working... 1
+# Main thread working... 2
+# Main thread working... 3
+# Hello, Alice! How are you today?
+# Main thread working... 4
+# Main thread working... 5
+```
+
+取消定时器：
+
+```python
+import threading
+import time
+
+def say():
+    print("Hello, world!")
+
+
+
+if __name__ == '__main__':
+    # 创建一个 5 秒后执行的定时器
+    timer = threading.Timer(5, say)
+
+    print("Timer started!")
+    timer.start()  # 启动定时器
+
+    # 主线程等待 2 秒后取消定时器
+    time.sleep(2)
+    timer.cancel()
+    print("Timer canceled!")
+
+# 输出：
+# Timer started!
+# Timer canceled!
+```
+
+#### 20.2.4.7 Barrier (栅栏对象)
+在 Python 3 中，线程栅栏对象 (threading.Barrier) 是一种线程同步机制，能够协调一组线程并确保它们在执行的某个阶段上达到同步。栅栏的作用类似于一个路障，要求所有线程在同一个点等待，直到某个条件满足，然后才能继续执行。
+
+`class threading.Barrier(parties, action=None, timeout=None)`  
+
+* `parties`：必须参数，表示需要等待的线程数。只有指定数量的线程都到达栅栏时，这些线程才会继续执行；
+* `action`：可选参数，当最后一个线程到达栅栏时，执行的可选操作（回调函数）；
+* `timeout`：可选参数，定义一个栅栏的默认超时时间。如果超过这个时间，等待栅栏的线程会抛出 BrokenBarrierError 异常；
+
+**常用方法**  
+* wait(timeout=None)：所有线程调用此方法后，会进入等待状态，直到指定数量的线程都调用了 wait()。当所有线程都到达栅栏后，线程可以继续执行。如果提供了 timeout 参数，则超时后线程抛出 BrokenBarrierError；
+  * 函数返回值是一个整数，取值范围在0到 parties -- 1，在每个线程中的返回值不相同。可用于从所有线程中选择唯一的一个线程执行一些特别的工作。例如：
+    ```
+    i = barrier.wait()
+    if i == 0:
+        # 只有一个线程需要打印此文本
+        print("passed the barrier")
+    ```
+* reset()：重置栅栏，允许重新使用栅栏，但当前处于等待的线程会抛出 BrokenBarrierError；
+* abort()：中止栅栏，任何在等待中的线程都会抛出 BrokenBarrierError；
+* broken：检查栅栏是否已被打破（返回布尔值 True 或 False）；
+* parties：需要同步的线程的数量；
+* n_waiting：当前已达到栅栏，并处于等待状态的线程数量；
+
+**示例**  
+
+使用 Barrier 同步线程：
+
+```python
+import threading
+import time
+
+def worker(barrier, worker_id):
+    print(f"Worker {worker_id} is waiting at the barrier.")
+    worker_ready = barrier.wait()  # 等待其他线程到达栅栏
+    if worker_ready == 0:  # 选择唯一的一个线程打印如下内容
+        print(f"Worker {worker_id} is the last to reach the barrier!")
+    print(f"Worker {worker_id} is proceeding.")
+
+if __name__ == "__main__":
+    num_threads = 4  # 定义线程数
+    barrier = threading.Barrier(num_threads)  # 创建栅栏，线程数为 4
+
+    threads = []
+    for i in range(num_threads):
+        thread = threading.Thread(target=worker, args=(barrier, i))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print("All workers have passed the barrier.")
+```
+设置回调函数：通过 action 参数，可以在最后一个线程到达栅栏（Barrier）时执行一个额外的动作，例如记录日志或进行某种特定操作。
+
+```python
+import threading
+import time
+
+def barrier_action():
+    print("All threads have reached the barrier. Executing action!")
+
+def worker(barrier, worker_id):
+    print(f"Worker {worker_id} is waiting at the barrier.")
+    barrier.wait()  # 等待其他线程到达栅栏
+    print(f"Worker {worker_id} is proceeding.")
+
+if __name__ == "__main__":
+    num_threads = 4
+    # 创建栅栏，指定 action 为 barrier_action
+    barrier = threading.Barrier(num_threads, action=barrier_action)
+
+    threads = []
+    for i in range(num_threads):
+        thread = threading.Thread(target=worker, args=(barrier, i))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    print("All workers have passed the barrier.")
+```
 
 ### 20.3 协程 (Coroutine)
 
