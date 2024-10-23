@@ -9345,40 +9345,121 @@ if __name__ == "__main__":
 
 协程是 Python 中的一种轻量级并发模型，通过异步编程实现任务的切换。协程与进程和线程不同，它不是由操作系统调度，而是通过程序本身来控制。
 
-**特点：**
+详见 21 章节，或者官网：https://docs.python.org/zh-cn/3/library/asyncio.html
 
-* 轻量级：协程不需要额外的线程或进程开销，它在单线程中通过事件循环实现异步执行，因此比线程和进程更高效；
-* 无锁设计：由于协程在同一线程中运行，不需要考虑锁等同步机制，避免了多线程中的竞争问题；
-* 非阻塞：协程在等待 I/O 操作时可以主动让出控制权，其他协程可以继续执行，从而提高程序的并发性；
+**概念：**  
+* 协程是一种特殊的生成器，能够在其执行中暂停和恢复。它们可以用 async def 定义，使用 await 关键字在协程内调用其他协程；
+* 与传统线程不同，协程不需要多线程的上下文切换，因此开销较小，性能更高；
 
-**缺点：**
+**协程的定义与运行：**  
+定义协程：协程使用 async def 关键字定义
+```
+async def worker():
+    print("Start coroutine")
+    # 模拟异步 I/O 操作
+    await asyncio.sleep(5)
+    print("End coroutine")
+```
 
-* 单线程：协程不能利用多核 CPU 进行并行计算；
-* 学习成本：相对于线程和进程，协程需要更复杂的编程模型，如事件循环、async/await 语法等；
+运行协程：可以使用 asyncio 模块中的事件循环来运行协程
 
-**使用场景：**
+```
+import asyncio
 
-* I/O 密集型任务，如高并发的网络服务、异步文件操作等；
+async def main():
+    # 调用协程
+    await worker()
 
-**代码示例：**
+
+if __name__ == '__main__':
+    # 运行事件循环
+    asyncio.run(main())
+```
+
+**示例：使用协程进行异步编程**  
+下面是一个示例，演示如何使用协程来并发处理多个任务：
 
 ```python
 import asyncio
 
 
-async def worker(num):
-    print(f'Worker {num} starting')
-    await asyncio.sleep(1)
-    print(f'Worker {num} finished')
+async def get_data(num):
+    """
+    定义了一个异步函数，模拟从网络获取数据的过程，使用 await asyncio.sleep(2) 模拟耗时的操作
+    """
+    print(f"Task {num}: Start fetching data...")
+    await asyncio.sleep(2)  # 模拟耗时的网络请求
+    print(f"Task {num}: Data fetched!")
+    return f"Data {num}"
 
 
 async def main():
-    tasks = [worker(i) for i in range(5)]
-    await asyncio.gather(*tasks)
+    """
+    创建多个协程任务并通过 asyncio.gather() 并发运行它们。gather 会等待所有协程完成，并返回结果
+    """
+    tasks = [get_data(i) for i in range(1, 4)]  # 创建多个协程任务
+    results = await asyncio.gather(*tasks)  # 并发运行所有协程
+    print("All tasks completed.")
+    print(results)
 
 
+# 运行事件循环
+if __name__ == "__main__":
+    """
+    运行 main() 协程并启动事件循环
+    """
+    asyncio.run(main())
+
+# 输出：
+# Task 1: Start fetching data...
+# Task 2: Start fetching data...
+# Task 3: Start fetching data...
+# Task 1: Data fetched!
+# Task 2: Data fetched!
+# Task 3: Data fetched!
+# All tasks completed.
+# ['Data 1', 'Data 2', 'Data 3']
+```
+
+或者：
+
+```
+import asyncio
+
+
+async def task_1():
+    print("Task 1 started")
+    await asyncio.sleep(2)
+    print("Task 1 completed")
+
+
+async def task_2():
+    print("Task 2 started")
+    await asyncio.sleep(1)
+    print("Task 2 completed")
+
+
+async def main():
+    # 并发执行多个任务
+    await asyncio.gather(task_1(), task_2())
+
+
+# 启动事件循环
 asyncio.run(main())
 ```
+
+**协程优势**  
+  * 非阻塞：在等待 I/O 操作时，协程不会阻塞其他任务的执行，可以有效提高程序的并发能力；
+  * 轻量级：协程比线程占用的内存更少，创建和切换协程的开销更小；
+  * 简洁：通过 async/await 语法，异步代码更易于阅读和理解；
+
+**适用场景**  
+  * 高并发 I/O 密集型任务（如网络请求、文件读写等）；
+  * 需要频繁进行异步操作的应用（如 Web 服务器、爬虫等）；
+
+**注意事项**
+  * 协程只能在异步上下文中运行，不能直接在普通函数中调用；
+  * 需要使用 asyncio.run() 或者创建一个事件循环来调度协程的执行；
 
 ### 20.4 并行 & 并发
 
@@ -9461,4 +9542,4 @@ asyncio.run(main())
 |  适用场景  | CPU 密集型任务 | I/O 密集型任务 | I/O 密集型任务 |
 
 总之，进程适合 CPU 密集型任务，而线程和协程适合 I/O 密集型任务。协程是目前在 Python 中实现高并发的首选方式，尤其适用于网络应用和异步操作。
-可以根据具体的应用场景选择适合的并发模型。
+可以根据具体的应用场景选择适合的并发模型。进程是指在系统中正在运行的一个应用程序，是CPU的最小工作单元，一个进程可以有一个或多个线程，一个线程可以有很多协程。
