@@ -9448,6 +9448,48 @@ async def main():
 asyncio.run(main())
 ```
 
+或者：
+
+```python
+import asyncio
+
+
+async def task_1():
+    print("Task 1 started")
+    await asyncio.sleep(2)
+    print("Task 1 finished")
+
+
+async def task_2():
+    print("Task 2 started")
+    await asyncio.sleep(1)
+    print("Task 2 finished")
+
+
+async def main():
+    task1 = asyncio.create_task(task_1())
+    task2 = asyncio.create_task(task_2())
+
+    await task1
+    await task2
+
+
+asyncio.run(main())
+
+
+# 输出： task_1 需要 2 秒完成，但 task_2 只需要 1 秒，因此它会先完成
+# Task 1 started
+# Task 2 started
+# Task 2 finished
+# Task 1 finished
+```
+
+**常见 asyncio 函数**  
+  * `asyncio.create_task(coro)`: 将协程封装为 Task，可以让事件循环并发地执行多个任务；
+  * `asyncio.gather(*coros)`: 并发地运行多个协程，并收集结果；
+  * `asyncio.sleep(seconds)`: 模拟异步等待，通常用于测试；
+  * `asyncio.run(coro)`: 运行协程，自动处理事件循环的创建和关闭；
+
 **协程优势**  
   * 非阻塞：在等待 I/O 操作时，协程不会阻塞其他任务的执行，可以有效提高程序的并发能力；
   * 轻量级：协程比线程占用的内存更少，创建和切换协程的开销更小；
@@ -9543,3 +9585,853 @@ asyncio.run(main())
 
 总之，进程适合 CPU 密集型任务，而线程和协程适合 I/O 密集型任务。协程是目前在 Python 中实现高并发的首选方式，尤其适用于网络应用和异步操作。
 可以根据具体的应用场景选择适合的并发模型。进程是指在系统中正在运行的一个应用程序，是CPU的最小工作单元，一个进程可以有一个或多个线程，一个线程可以有很多协程。
+
+## 21. asyncio 异步 I/O
+
+Python 的 asyncio 模块是用于编写并发代码的库，它使用 async/await 语法来实现异步 I/O 操作。异步 I/O 允许在等待 I/O 操作完成时执行其他任务，从而提高程序的性能，特别是在 I/O 密集型任务（如网络请求、文件读写）中效果显著。
+
+**核心概念：**  
+* `事件循环 (Event Loop)`: asyncio 的核心，负责调度和执行协程。事件循环会不断运行，监听 I/O 操作完成后触发的事件；
+* `协程 (Coroutine)`: 是可以被挂起和恢复的函数，通常使用 async def 定义，并通过 await 关键字挂起协程直到异步操作完成；
+* `任务 (Task)`: Task 是由事件循环执行的协程。通过将协程封装为任务，事件循环可以并发地运行多个任务；
+* `Future`: 类似于 JavaScript 中的 Promise，表示一个将来完成的操作。通常你不需要直接操作 Future，而是通过协程和任务来使用它；
+
+示例：  
+
+```python
+import asyncio
+
+async def main():
+    print('Hello ...')
+    await asyncio.sleep(1)
+    print('... World!')
+
+asyncio.run(main())
+```
+
+在上述例子中，main 是一个异步协程，调用 asyncio.sleep(1) 会暂停 1 秒，并让出控制权给事件循环。之后，事件循环继续执行下一个任务，1 秒后再恢复这个协程的执行。
+
+**asyncio REPL**  
+在 Python 中运行 `python -m asyncio` 启动 asyncio 调试模式。启动后，进入到 asyncio 的交互环境，方便进行一些异步函数的简单测试。
+
+可以在 REPL 中尝试使用 asyncio 并发上下文：
+
+```
+$ python -m asyncio
+asyncio REPL 3.12.3 (main, Apr 27 2024, 19:00:26) [GCC 9.4.0] on linux
+Use "await" directly instead of "asyncio.run()".
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import asyncio
+>>> await asyncio.sleep(10, result='hello')
+'hello'
+```
+
+### 21.1 运行 asyncio 程序
+
+* `asyncio.run(coro, *, debug=None, loop_factory=None)`  
+
+  此函数会运行传入的协程(coroutine) coro 并返回结果，负责管理 asyncio 事件循环，终结异步生成器，并关闭执行器。当有其他 asyncio 事件循环在同一线程中运行时，此函数不能被调用。
+  
+  * `coro`：要运行的协程，必须是一个协程对象，通常是由 async def 定义的函数；
+  * `debug`：如果设置为 True，事件循环将运行于调试模式。可以通过传递 True 或 False 来启用或禁用调试功能，也可以设置为 None（默认值），将沿用全局 Debug 模式设置；
+  * `loop_factory`：工厂函数，用于创建自定义事件循环。如果传递了该参数，asyncio.run() 会使用该工厂函数生成事件循环，默认 loop_factory 为 None，则使用 asyncio.new_event_loop() 并通过 asyncio.set_event_loop() 将其设置为当前事件循环；
+    假设使用 [uvloop](https://pypi.org/project/uvloop/) 作为 asyncio 的事件循环：
+    ```python
+    import asyncio
+    import uvloop
+        
+    async def task():
+        print("Task started")
+        await asyncio.sleep(1)
+        print("Task finished")
+    
+    # 使用自定义的事件循环工厂
+    asyncio.run(task(), loop_factory=uvloop.new_event_loop)
+    ```
+
+* `class asyncio.Runner(*, debug=None, loop_factory=None)`  
+  在相同上下文中，多个异步函数调用可通过上下文管理器进行简化。`debug`、`loop_factory` 与 `asyncio.run` 一样。
+  通过上下文管理器重写 `asyncio.run()` 示例：
+  ```python
+  import asyncio
+
+  async def main():
+      await asyncio.sleep(1)
+      print('hello')
+  
+  
+  with asyncio.Runner() as runner:
+      runner.run(main())
+  ```
+  
+  示例：
+  ```
+  import asyncio
+  import uvloop
+  
+  
+  async def task():
+      print("Task started")
+      await asyncio.sleep(1)
+      print("Task finished")
+  
+  
+  # 创建 Runner 实例，使用自定义的事件循环工厂
+  runner = asyncio.Runner(loop_factory=uvloop.new_event_loop)
+  
+  try:
+      runner.run(task())
+  finally:
+      runner.close()
+  ```
+  
+  `asyncio.Runner` 方法：  
+    * run(coro, *, context=None)：运行一个协程，返回协程的结果或者引发其异常。该方法类似于 asyncio.run()，但需要在 Runner 实例的上下文中调用。
+      * 参数 context 允许指定一个自定义 contextvars.Context 用作 coro 运行所在的上下文。 如果为 None 则会使用运行器的默认上下文。
+    * runner.close()：关闭事件循环，释放相关资源。
+    * get_loop()：返回运行器实例的事件循环。
+
+### 21.2 协程与任务
+
+#### 21.2.1 协程
+通过 async/await 语法声明协程，是编写 asyncio 应用的推荐方式。
+
+例如：
+
+```
+In [1]: import asyncio
+
+In [2]: async def main():
+   ...:     print('hello')
+   ...:     await asyncio.sleep(1)
+   ...:     print('world')
+   ...: 
+
+In [3]: main()
+Out[3]: <coroutine object main at 0x7fe01b04a680>
+
+In [4]: asyncio.run(main())
+hello
+world
+
+In [5]: await main()
+hello
+world
+```
+
+如上，简单通过 main() 调用并不会执行协程，要运行一个协程，asyncio 提供以下机制：
+
+* `asyncio.run()`：  
+  ```
+  asyncio.run(main())
+  ```
+* `await`：  
+  ```
+  import asyncio
+  import time
+  
+  async def say_after(delay, what):
+      await asyncio.sleep(delay)
+      print(what)
+  
+  async def main():
+      print(f"started at {time.strftime('%X')}")
+  
+      await say_after(1, 'hello')
+      await say_after(2, 'world')
+  
+      print(f"finished at {time.strftime('%X')}")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # started at 14:00:29
+  # hello
+  # world
+  # finished at 14:00:32
+  ```
+  运行时间 3 秒。
+* `asyncio.create_task()`：  
+  `asyncio.create_task(coro, *, name=None, context=None)`:将 coro 协程封装为一个 Task 并调度其执行，返回 Task 对象。  
+  并发运行多个协程，如，修改以上示例，并发运行两个 say_after 协程:
+  ```python
+  async def main():
+      task1 = asyncio.create_task(say_after(1, 'hello'))
+      task2 = asyncio.create_task(say_after(2, 'world'))
+      print(f"started at {time.strftime('%X')}")
+  
+      # 等待直到两个任务都完成
+      # （会花费约 2 秒钟。）
+      await task1
+      await task2
+      print(f"finished at {time.strftime('%X')}")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # started at 14:08:53
+  # hello
+  # world
+  # finished at 14:08:55
+  ```
+  并发起作用，运行时间 2 秒，快上 1 秒。
+* `asyncio.TaskGroup`:  
+  任务分组异步上下文管理器，可以使用 create_task() 将任务添加到分组中。
+  ```python
+  async def main():
+      async with asyncio.TaskGroup() as tg:
+          task1 = tg.create_task(say_after(1, 'hello'))
+          task2 = tg.create_task(say_after(2, 'world'))
+          print(f"started at {time.strftime('%X')}")
+  
+      # 当存在上下文管理器时 await 是隐式执行的。
+      print(f"finished at {time.strftime('%X')}")
+      
+  asyncio.run(main())
+  
+  # 输出：
+  # started at 14:24:42
+  # hello
+  # world
+  # finished at 14:24:44
+  ```
+  
+#### 21.2.2 任务 
+
+#### 21.2.2.1 可等待对象  
+
+如果一个对象可以在 await 语句中使用，那么它就是可等待对象。可等待对象有三种主要类型：协程, 任务 和 Future。  
+
+* 协程  
+  Python 协程属于可等待对象，因此可以在其他协程中被等待:
+  ```python
+  import asyncio
+  
+  async def nested():
+      return 42
+  
+  async def main():
+      # nested()  # Raise：RuntimeWarning
+      print(await nested())  # 输出 "42"
+  
+  asyncio.run(main())
+  ```
+  注意：
+    * 协程函数: 定义形式为 async def 的函数;
+    * 协程对象: 调用 协程函数 所返回的对象；
+
+* Futures  
+  Future 对象表示一个异步操作的最终结果。可以看作一个占位符，表示稍后会提供结果的操作。可以用于等待异步操作的完成或从异步操作中获取结果。在 asyncio 中，Future 对象通常由事件循环创建和管理。asyncio 的协程会隐式地与 Future 对象交互，最终由事件循环将结果设置到 Future 上。主要用于低层次的操作，例如等待某个异步操作的结果。开发者通常不会直接创建 Future 对象，而是通过 await 来等待异步操作。
+
+  **核心方法和属性**   
+    * `future.result()`：获取异步操作的结果，如果结果尚未准备好，会抛出异常；
+    * `future.set_result(value)`：手动设置 Future 对象的结果；
+    * `future.set_exception(exception)`：手动为 Future 设置一个异常；
+    * `future.done()`：返回 True，表示 Future 已经完成（无论是正常结束还是异常）；
+    * `future.add_done_callback(fn)`：当 Future 完成时，注册一个回调函数 fn 来处理结果；
+  
+  示例：手动创建和完成 Future  
+  
+  ```python
+  import asyncio
+
+
+  async def set_future_value(fut):
+      await asyncio.sleep(1)  # 模拟异步操作
+      fut.set_result("Future result")  # 设置 Future 的结果
+  
+  
+  async def main():
+      # 创建 Future 对象
+      fut = asyncio.Future()
+  
+      # 启动异步任务来设置 Future 的值
+      await asyncio.create_task(set_future_value(fut))
+  
+      # 获取 Future 的结果
+      print(fut.result())  # 输出: Future result
+  
+  
+  # 使用 asyncio.run 运行协程
+  asyncio.run(main())
+  ```
+
+* 任务  
+  任务（Tasks）是 asyncio 中的一种高级对象，它封装了一个协程并允许将其加入事件循环中执行。与 Future 不同，Task 本质上是一个 Future，但它主要用于调度和运行协程。
+  ```python
+  import asyncio
+  
+  async def nested():
+      return 42
+  
+  async def main():
+      task = asyncio.create_task(nested())
+      result = await task
+      print(result)
+  asyncio.run(main())
+  ```
+
+#### 21.2.2.2 创建任务
+
+`asyncio.create_task(coro, *, name=None, context=None)`: 是 asyncio 提供的一个函数，用于将协程（coroutine）封装为 Task 并将其调度到事件循环中执行。这个函数可以让协程以异步的方式执行，而不需要阻塞当前的代码。
+返回值是一个 Task 对象，即 asyncio.Task 实例。任务一旦创建，事件循环将会立即开始执行它，直到任务完成或被取消。
+
+* coro（必须）：要封装并调度的协程对象，它是一个异步函数的调用，该协程会立即被调度，加入到事件循环中执行；
+* name=None（可选）：任务的名称。可以为任务设置一个字符串名称，便于调试和日志记录，任务名称可以帮助你在调试时更容易识别任务，如果不设置，默认任务没有名字；
+* context=None（可选）：传递给 Task 的上下文（Context），允许在不同的 Task 之间共享上下文对象，它提供了异步任务的上下文管理，方便追踪状态、异常等，不常用，默认使用当前上下文；
+
+**任务的调度**：调用 asyncio.create_task() 后，协程 coro 不会同步阻塞当前的函数，它会被放入事件循环中，并且一旦事件循环准备好执行该任务，任务将自动开始。
+**与 await 的区别**：await 是同步等待协程执行完的结果，而 create_task() 是异步的，不会阻塞当前函数，会让协程并行执行。
+
+* 示例 1：基本用法
+  ```
+  import asyncio
+  
+  
+  async def task():
+      print("Task started")
+      await asyncio.sleep(2)
+      print("Task finished")
+  
+  
+  async def main():
+      # 创建并调度任务
+      task1 = asyncio.create_task(task())
+  
+      # 主函数不会等待任务完成，继续执行
+      print("Task is running in the background")
+  
+      # 等待任务完成（可选的）
+      await task1
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task is running in the background
+  # Task started
+  # Task finished
+  ```
+
+* 示例 2：设置任务名称
+
+  ```python
+  import asyncio
+  
+  
+  async def my_named_task():
+      await asyncio.sleep(1)
+      print("Named Task completed")
+  
+  
+  async def main():
+      # 创建并命名任务
+      task = asyncio.create_task(my_named_task(), name="MyUniqueTask")
+      print(f"Task Name: {task.get_name()}")  # 输出任务的名称
+      await task
+  
+  
+  asyncio.run(main())
+  ```
+
+* 示例 3：任务与上下文（context）
+
+  对于 context 的使用，涉及 contextvars 模块，可以在异步任务之间传递上下文信息，一个典型的例子是追踪请求的状态或 ID。
+
+  ```python
+  import asyncio
+  import contextvars
+  
+  # 创建一个上下文变量
+  request_id = contextvars.ContextVar('request_id')
+  
+  
+  async def task_with_context():
+      # 在任务中读取上下文变量
+      print(f"Task request_id: {request_id.get()}")
+      await asyncio.sleep(1)
+  
+  
+  async def main():
+      # 创建新的上下文
+      ctx = contextvars.copy_context()
+  
+      # 设置上下文变量的值
+      ctx.run(request_id.set, "12345")
+  
+      # 使用设置好的上下文来创建任务
+      task = asyncio.create_task(task_with_context(), context=ctx)
+  
+      await task
+  
+  
+  # 运行主协程
+  asyncio.run(main())
+  
+  # 输出：
+  # Task request_id: 12345
+  ```
+
+  * contextvars.ContextVar：这是一个可以在协程之间共享的变量类型。在不同的协程中可以有独立的值，并且不会相互干扰；
+  * contextvars.copy_context()：这个函数用于复制当前上下文，生成一个新的上下文。在新上下文中可以进行变量设置并传递给任务；
+  * ctx.run(request_id.set, "12345")：使用上下文的 run 方法来设置 request_id 变量的值；
+  * asyncio.create_task(..., context=ctx)：将创建的上下文 ctx 传递给 create_task，使得这个任务在执行过程中使用这个上下文；
+
+  通过上下文管理，可以在异步任务之间共享状态或变量，不会造成并发数据污染。
+
+* 示例 4：取消任务  
+
+  ```python
+  import asyncio
+  
+  
+  async def my_task():
+      print("Task started")
+      try:
+          await asyncio.sleep(5)  # 模拟长时间运行的任务
+      except asyncio.CancelledError:
+          print("Task was cancelled!")
+          raise
+      print("Task finished")
+  
+  
+  async def main():
+      task = asyncio.create_task(my_task())
+  
+      await asyncio.sleep(2)  # 让任务执行一段时间
+      task.cancel()  # 取消任务
+  
+      try:
+          await task  # 等待任务完成并捕获取消异常
+      except asyncio.CancelledError:
+          print("Task has been cancelled")
+  
+  
+  # 使用 asyncio.run 运行协程
+  asyncio.run(main())
+  
+  # 输出：
+  # Task started
+  # Task was cancelled!
+  # Task has been cancelled
+  ```
+
+#### 21.2.2.3 任务组
+asyncio.TaskGroup 是 Python 3.11 引入的新特性，提供了一种结构化的方式来管理异步任务组。它旨在简化多个任务的创建和管理，增强了异常处理机制，使得在并发编程中处理任务更安全和高效。与传统的 asyncio.gather() 和 asyncio.wait() 不同，TaskGroup 通过上下文管理器的方式来确保所有任务的生命周期都在同一个范围内被创建和管理。
+
+* create_task(coro, *, name=None)：该方法与 asyncio.create_task() 类似，在任务组中创建并调度协程。返回一个 Task 对象；
+* __aenter__() 和 __aexit__()：支持上下文管理，当退出上下文时会确保所有任务都已完成或者已经被取消；
+* 异常传播：如果某个任务抛出异常，任务组会自动取消其他所有任务，并将异常抛出给调用者；
+
+**示例**  
+
+* 示例 1：基本用法示例  
+  ```python
+  import asyncio
+  
+  async def task(num):
+      await asyncio.sleep(1)
+      print(f"Task {num} done")
+      return f"Result {num}"
+  
+  async def main():
+      # 使用 TaskGroup 管理任务组
+      async with asyncio.TaskGroup() as tg:
+          # 创建并调度任务
+          task1 = tg.create_task(task(1))
+          task2 = tg.create_task(task(2))
+          task3 = tg.create_task(task(3))
+  
+      # 在 TaskGroup 上下文结束后，所有任务已经完成
+      print(f"Task 1: {task1.result()},Task 2: {task2.result()},Task 3: {task3.result()}")
+  
+  # 运行主协程
+  asyncio.run(main())
+  # 输出：
+  # Task 1 done
+  # Task 2 done
+  # Task 3 done
+  # Task 1: Result 1,Task 2: Result 2,Task 3: Result 3
+  ```
+
+* 示例 2：异常处理  
+  asyncio.TaskGroup 提供了自动化的异常处理机制。如果任务组中的某个任务抛出异常，TaskGroup 会自动取消其他任务，并且该异常会传播到调用者。
+  
+  ```python
+  import asyncio
+  
+  
+  async def task(num):
+      await asyncio.sleep(num)
+      if num == 2:
+          raise ValueError("Task 2 encountered an error!")
+      print(f"Task {num} done")
+      return f"Result {num}"
+  
+  
+  async def main():
+      try:
+          # 使用 TaskGroup 管理任务组
+          async with asyncio.TaskGroup() as tg:
+              # 创建并调度任务
+              task1 = tg.create_task(task(1))
+              task2 = tg.create_task(task(2))  # 这个任务会抛出异常
+              task3 = tg.create_task(task(3))
+      except Exception as e:
+          print(f"An exception occurred: {e}")
+  
+      # 在 TaskGroup 上下文结束后，所有任务已经完成
+      print(f"Task 1: {task1.result()},Task 2: {task2.result()},Task 3: {task3.result()}")
+  
+  
+  # 运行主协程
+  asyncio.run(main())
+  ```
+  * 当 task2 抛出异常时，TaskGroup 自动捕获该异常并取消 task3，因此 task3 不会完成；
+  * TaskGroup 会自动传播异常给调用者，因此外层的 try/except 块能够捕获并处理该异常；
+  
+  或：  
+  ```python
+  import asyncio
+  from asyncio import TaskGroup
+  
+  
+  class TerminateTaskGroup(Exception):
+      """Exception raised to terminate a task group."""
+  
+  
+  async def force_terminate_task_group():
+      """Used to force termination of a task group."""
+      raise TerminateTaskGroup()
+  
+  
+  async def job(task_id, sleep_time):
+      print(f'Task {task_id}: start')
+      await asyncio.sleep(sleep_time)
+      print(f'Task {task_id}: done')
+  
+  
+  async def main():
+      try:
+          async with TaskGroup() as group:
+              # spawn some tasks
+              group.create_task(job(1, 0.5))
+              group.create_task(job(2, 1.5))
+              # sleep for 1 second
+              await asyncio.sleep(1)
+              # add an exception-raising task to force the group to terminate
+              group.create_task(force_terminate_task_group())
+      except* TerminateTaskGroup:
+          pass
+  
+  
+  asyncio.run(main())
+  ```
+
+* 示例 3：自动取消任务示例  
+  如果某个任务抛出异常，TaskGroup 会立即取消其他所有正在运行的任务，这有助于避免在错误条件下无用的任务继续运行。
+  
+  ```python
+  import asyncio
+  
+  async def task_1():
+      await asyncio.sleep(1)
+      print("Task 1 done")
+      return "Result 1"
+  
+  async def task_2():
+      await asyncio.sleep(2)
+      raise ValueError("Task 2 failed!")
+  
+  async def task_3():
+      try:
+          await asyncio.sleep(3)
+          print("Task 3 done")
+      except asyncio.CancelledError:
+          print("Task 3 was cancelled!")
+  
+  async def main():
+      try:
+          async with asyncio.TaskGroup() as tg:
+              tg.create_task(task_1())
+              tg.create_task(task_2())  # This will raise an exception
+              tg.create_task(task_3())
+      except Exception as e:
+          print(f"An exception occurred: {e}")
+  
+  # 运行主协程
+  asyncio.run(main())
+  
+  # 输出：
+  # Task 1 done
+  # Task 3 was cancelled!
+  # An exception occurred: unhandled errors in a TaskGroup (1 sub-exception)
+  ```
+  当 task_2 发生异常时，TaskGroup 取消了所有其他任务，因此 task_3 被取消并捕获到了 CancelledError。
+  
+#### 21.2.2.4 休眠
+
+`coroutine asyncio.sleep(delay, result=None)` 阻塞 delay 指定的秒数，如果指定了 result，则当协程完成时将其返回给调用者。
+
+以下协程示例运行 5 秒，每秒显示一次当前日期：  
+
+```python
+import asyncio
+import datetime
+
+async def display_date():
+    loop = asyncio.get_running_loop()
+    end_time = loop.time() + 5.0
+    while True:
+        print(datetime.datetime.now())
+        if (loop.time() + 1.0) >= end_time:
+            break
+        await asyncio.sleep(1)
+
+asyncio.run(display_date())
+```
+  * asyncio.get_running_loop()：获取当前正在运行的事件循环。如果没有正在运行的事件循环抛出 RuntimeError；
+  * loop.time()：事件循环中的一个高精度时钟，用来获取事件循环的当前时间。与 time.time() 不同，loop.time() 返回的是相对时间，并且不会受系统时间修改的影响，因此非常适合用于异步编程中的定时任务；
+
+#### 21.2.2.5 并发运行任务
+
+`asyncio.gather(*aws, return_exceptions=False)`， 并发运行 aws 序列中的可等待对象。
+
+**参数说明：**  
+* `*aws`：传递多个可等待对象（协程、任务、Future 等），这些任务将会并发运行，asyncio.gather() 会等待所有的任务完成，并返回每个任务的结果，结果的顺序与传入的任务顺序相同。
+* `return_exceptions`（可选，默认为 False）：
+  * 当 False 时，任何一个任务抛出的异常会被立即传播并中止 gather，未完成的任务会被取消；
+  * 当 True 时，异常不会立即传播，而是作为结果的一部分返回，这样即使某些任务失败，gather 仍然会等待其他任务的结果，异常对象将作为返回值列表中的一部分返回；
+
+**返回值：**  
+* 如果所有任务成功完成，asyncio.gather() 会返回一个包含每个任务结果的列表，顺序与传入的任务相同；
+* 如果设置 return_exceptions=True，并且某些任务抛出异常，则返回的列表会包含异常对象；
+
+**示例：**  
+
+* 示例 1：基本用法  
+  ```python
+  import asyncio
+  
+  async def task(num):
+      await asyncio.sleep(num)
+      print(f"Task {num} completed")
+      return f"Num {num}"
+  
+  async def main():
+      # gather 可以并行运行多个任务
+      tasks = []
+      for i in range(1,4):
+          tasks.append(task(i))
+      results = await asyncio.gather(*tasks)
+      print(f"Results: {results}")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task 1 completed
+  # Task 2 completed
+  # Task 3 completed
+  # Results: ['Num 1', 'Num 2', 'Num 3']
+  ```  
+
+* 示例 2：异常示例（return_exceptions = False）  
+  ```
+  import asyncio
+  
+  
+  async def task(num):
+      await asyncio.sleep(num)
+      if num == 2:
+          # 模拟异常处理
+          raise ValueError(f"Task {num} failed!")
+      print(f"Task {num} completed")
+      return f"Num {num}"
+  
+  
+  async def main():
+      # gather 可以并行运行多个任务
+      tasks = []
+      for i in range(1,4):
+          tasks.append(task(i))
+      try:
+          results = await asyncio.gather(*tasks)
+          print(f"Results: {results}")
+      except Exception as e:
+          print(f"An error occurred: {e}")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task 1 completed
+  # An error occurred: Task 2 failed!
+  ```
+
+* 示例 3：异常示例（return_exceptions = True）  
+  ```python
+  import asyncio
+  
+  
+  async def task(num):
+      await asyncio.sleep(num)
+      if num == 2:
+          # 模拟异常处理
+          raise ValueError(f"Task {num} failed!")
+      print(f"Task {num} completed")
+      return f"Num {num}"
+  
+  
+  async def main():
+      # gather 可以并行运行多个任务
+      tasks = []
+      for i in range(1, 4):
+          tasks.append(task(i))
+      try:
+          results = await asyncio.gather(*tasks, return_exceptions=True)
+          print(f"Results: {results}")
+      except Exception as e:
+          print(f"An error occurred: {e}")
+  
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task 1 completed
+  # Task 3 completed
+  # Results: ['Num 1', ValueError('Task 2 failed!'), 'Num 3']
+  ```
+  
+* 示例 4：结合 I/O 操作的并发下载    
+  假设有多个 URL，需要并发下载它们，可以用 asyncio.gather() 来并发执行多个下载任务：
+  ```python
+  import asyncio
+  import aiohttp
+  
+  
+  async def fetch(session, url):
+      async with session.get(url) as response:
+          print(f"Fetching: {url}")
+          return await response.text()
+  
+  
+  async def main():
+      urls = [
+          "https://example.com",
+          "https://httpbin.org/get",
+          "https://jsonplaceholder.typicode.com/posts"
+      ]
+  
+      async with aiohttp.ClientSession() as session:
+          results = await asyncio.gather(
+              *(fetch(session, url) for url in urls)
+          )
+          for i, content in enumerate(results):
+              print(f"Content {i + 1} length: {len(content)}")
+  
+  
+  asyncio.run(main())
+  ```
+  使用 aiohttp 库来并发下载多个 URL 的内容，并使用 asyncio.gather() 来并发运行这些下载任务。gather 会等所有的下载任务完成，然后返回每个下载任务的结果。
+
+#### 21.2.2.6 任务 “立即执行”
+`asyncio.create_eager_task_factory()` 和 `asyncio.eager_task_factory()` 提供了一种任务的主动调度，而不是被动等待。
+通常情况下，像 asyncio.create_task() 方法创建的任务虽然被加入事件循环，但它们的实际执行依赖于事件循环的调度顺序。而 eager_task_factory 提供的 API 强调的是任务被立即执行，即在可能的情况下尽早进入执行状态。
+
+* `asyncio.eager_task_factory(loop, coro, *, name=None, context=None)`  
+  用于立即创建并调度任务。当使用这个工厂函数时 (通过 loop.set_task_factory(asyncio.eager_task_factory))，协程将在 Task 构造期间同步地开始执行。任务仅会在它们阻塞时被加入事件循环上的计划任务。这可以达成性能提升因为对同步完成的协程来说可以避免循环调度的开销。
+
+  **参数说明**  
+  * `loop`：事件循环实例，任务会在这个事件循环中被调度；
+  * `coro`：需要执行的协程对象；
+  * `name`（可选）：为任务指定一个名称，有助于调试；
+  * `context`（可选）：任务的上下文对象，用于处理任务运行时的上下文；
+  
+  **返回值：**  
+  * 返回一个 Task 对象，该任务立即调度并开始运行；
+
+  **示例：**  
+  ```python
+  import asyncio
+  
+  async def task():
+      await asyncio.sleep(1)
+      print("Task completed")
+  
+  async def main():
+      loop = asyncio.get_running_loop()
+      # 立即创建并调度任务
+      task1 = asyncio.eager_task_factory(loop, task(), name="MyTask")
+      await task1
+  
+  asyncio.run(main())
+  ```
+  
+  **性能对比：**  
+  
+  ```python
+  import asyncio
+  import time
+  
+  
+  async def light_coro():
+      pass
+  
+  
+  async def main():
+      print('Before running task group!')
+      time0 = time.time()
+      asyncio.get_event_loop().set_task_factory(asyncio.eager_task_factory)
+      async with asyncio.TaskGroup() as tg:
+          for _ in range(1000000):
+              tg.create_task(light_coro())
+      print(f'It took {time.time() - time0} to run!')
+      print('After running task group with eager task factory!')
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Before running task group!
+  # It took 1.201669692993164 to run!
+  # After running task group with eager task factory!
+  ```
+  
+  注释：`asyncio.get_event_loop().set_task_factory(asyncio.eager_task_factory)`  
+
+  ```python
+  import asyncio
+  import time
+  
+  
+  async def light_coro():
+      pass
+  
+  
+  async def main():
+      print('Before running task group!')
+      time0 = time.time()
+      # asyncio.get_event_loop().set_task_factory(asyncio.eager_task_factory)
+      async with asyncio.TaskGroup() as tg:
+          for _ in range(1000000):
+              tg.create_task(light_coro())
+      print(f'It took {time.time() - time0} to run!')
+      print('After running task group with eager task factory!')
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Before running task group!
+  # It took 8.283295392990112 to run!
+  # After running task group with eager task factory!  
+  ```
+  可以看到性能提升接近 7 倍。  
+
+* `asyncio.create_eager_task_factory(custom_task_constructor)`
+该函数用于创建一个任务工厂，该工厂能够使用自定义的任务构造函数。通常在默认的任务工厂之外，你可以使用这个方法来创建更多可控的任务。
+
+**参数说明：**  
+  * custom_task_constructor：这是一个自定义的任务构造函数，该构造函数通常会接受事件循环和协程作为输入，并返回一个任务对象；
+
+**返回值：**  
+  * 返回一个工厂函数，可以用于生成任务对象；
+
+**示例：**
+TODO： 代补充
