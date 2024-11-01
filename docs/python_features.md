@@ -10167,7 +10167,7 @@ asyncio.TaskGroup 是 Python 3.11 引入的新特性，提供了一种结构化�
   # An exception occurred: unhandled errors in a TaskGroup (1 sub-exception)
   ```
   当 task_2 发生异常时，TaskGroup 取消了所有其他任务，因此 task_3 被取消并捕获到了 CancelledError。
-  
+
 #### 21.2.2.4 休眠
 
 `coroutine asyncio.sleep(delay, result=None)` 阻塞 delay 指定的秒数，如果指定了 result，则当协程完成时将其返回给调用者。
@@ -10424,14 +10424,654 @@ asyncio.run(display_date())
   ```
   可以看到性能提升接近 7 倍。  
 
-* `asyncio.create_eager_task_factory(custom_task_constructor)`
-该函数用于创建一个任务工厂，该工厂能够使用自定义的任务构造函数。通常在默认的任务工厂之外，你可以使用这个方法来创建更多可控的任务。
+* `asyncio.create_eager_task_factory(custom_task_constructor)`  
+  该函数用于创建一个任务工厂，该工厂能够使用自定义的任务构造函数。通常在默认的任务工厂之外，你可以使用这个方法来创建更多可控的任务。  
+  
+  **参数说明：**  
+    * custom_task_constructor：这是一个自定义的任务构造函数，该构造函数通常会接受事件循环和协程作为输入，并返回一个任务对象；
 
-**参数说明：**  
-  * custom_task_constructor：这是一个自定义的任务构造函数，该构造函数通常会接受事件循环和协程作为输入，并返回一个任务对象；
+  **返回值：**  
+    * 返回一个工厂函数，可以用于生成任务对象；
+
+  **示例：**
+  TODO： 代补充
+
+#### 21.2.2.7 避免任务 “取消”
+`asyncio.shield(aw)` 是一个用于保护协程或 Future 对象的工具，它可以防止被取消。当一个协程或任务被 await 时，如果外部取消它（例如，由其他任务或超时机制触发），那么该协程将被中断。
+但通过 asyncio.shield(aw)，你可以保护协程 aw 免受取消影响，从而确保它可以继续执行。
+
+以下语句:
+```
+task = asyncio.create_task(something())
+res = await shield(task)
+```
+相当于:  
+```
+res = await something()
+```
+不同之处在于如果包含它的协程被取消，在 something() 中运行的任务不会被取消。从 something() 的角度看来，取消操作并没有发生。然而其调用者已被取消，因此 "await" 表达式仍然会引发 CancelledError。
+如果通过其他方式取消 something() (例如在其内部操作) 则 shield() 也会取消。
+如果希望完全忽略取消操作 (不推荐) 则 shield() 函数需要配合一个 try/except 代码段，如下所示:
+```
+task = asyncio.create_task(something())
+try:
+    res = await shield(task)
+except CancelledError:
+    res = None
+```
+**工作机制：**  
+* 外部取消：当调用 asyncio.shield() 保护的协程时，外部的取消请求不会直接影响协程的运行。任务会被包裹在一个屏障内，直到其完成；
+* 内部取消：如果协程或任务内部自己被取消（例如在代码逻辑中显式调用取消），则该协程依然会被中断；
+
+**示例：**  
+```python
+import asyncio
+
+async def example_task():
+    print("Task started")
+    await asyncio.sleep(2)  # 模拟长时间运行的任务
+    print("Task completed")
+    return "Task result"
+
+async def cancel_task(task):
+    await asyncio.sleep(1)
+    print("Cancelling task...")
+    task.cancel()  # 外部取消任务
+
+async def main():
+    # 创建一个任务
+    task = asyncio.create_task(example_task())
+
+    # 将任务保护在 shield 中，防止取消
+    protected_task = asyncio.shield(task)
+
+    # 启动一个任务来取消我们创建的任务
+    asyncio.create_task(cancel_task(protected_task))
+
+    try:
+        result = await protected_task
+        print(f"Protected task finished with result: {result}")
+    except asyncio.CancelledError:
+        print("Protected task was cancelled")
+
+asyncio.run(main())
+
+# 输出：
+# Task started
+# Cancelling task...
+# Protected task was cancelled
+```
+
+#### 21.2.2.8 任务超时
+
+* `asyncio.timeout(delay)`  
+
+  `asyncio.timeout(delay)` 是 Python 3.11 引入的一个新特性，它提供了一种更简便的方式来为异步任务设置超时。在指定的时间 delay 内，如果异步操作未完成，它将抛出 asyncio.TimeoutError 异常。 参数 delay 可以为 None，或是一个表示等待秒数的浮点数/整数。 如果 delay 为 None，将不会应用时间限制；如果当创建上下文管理器时无法确定延时则此设置将很适用。
+  
+  示例：  
+  ```
+  async def main():
+    async with asyncio.timeout(10):
+        await long_running_task()
+  ```
+  
+  如果 long_running_task 耗费 10 秒以上完成，该上下文管理器将取消当前任务并在内部处理所引发的 asyncio.CancelledError，将其转化为可被捕获和处理的 TimeoutError。     
+  【备注】`asyncio.timeout()` 上下文管理器负责将 `asyncio.CancelledError` 转化为 `TimeoutError`，这意味着 `TimeoutError` 只能在该上下文管理器 之外 被捕获。  
+
+  捕获 TimeoutError 的示例:    
+  ```python
+  import asyncio
+  
+  async def example_task():
+      print("Task started")
+      await asyncio.sleep(3)  # 模拟一个长时间任务（3秒）
+      print("Task completed")
+      return "Task result"
+  
+  async def main():
+      try:
+          # 设置超时时间为2秒，超过则抛出TimeoutError
+          async with asyncio.timeout(2):
+              result = await example_task()
+              print(f"Task finished with result: {result}")
+      except asyncio.TimeoutError:
+          print("Task took too long and was cancelled due to timeout.")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task started
+  # Task took too long and was cancelled due to timeout.
+  ```
+  
+  `asyncio.timeout(None)` 示例：    
+  ```python
+  import asyncio
+  
+  
+  async def long_running_task():
+      print("Task started")
+      await asyncio.sleep(5)
+      print("Task completed")
+  
+  
+  async def main():
+      try:
+          # 不知道超时时间，所以传递 `None`
+          async with asyncio.timeout(None) as cm:
+              # 知道超时时间，重新设置超时
+              new_deadline = asyncio.get_running_loop().time() + 3
+              cm.reschedule(new_deadline)
+              await long_running_task()
+      except TimeoutError:
+          pass
+  
+      if cm.expired():
+          print("Looks like we haven't finished on time.")
+  
+  
+  asyncio.run(main())
+  ```
+
+* `asyncio.timeout_at(when)`  
+
+  类似于 asyncio.timeout()，不同之处在于 when 是停止等待的绝对时间，或者为 None，而不是基于相对的延迟（如 asyncio.timeout() 使用的延迟时间）。    
+
+  **参数：**
+    * when：这是一个浮点数，表示 Unix 时间戳（从1970年1月1日开始计算的秒数）。可以通过 loop.time() 或 time.time() 获得当前时间，再加上需要的延迟，来生成一个目标时间戳。  
+  
+  **示例：**  
+  ```
+  import asyncio
+  
+  
+  async def example_task():
+      print("Task started")
+      await asyncio.sleep(3)  # 模拟长时间任务
+      print("Task completed")
+      return "Task result"
+  
+  
+  async def main():
+      # 获取当前事件循环
+      loop = asyncio.get_running_loop()
+  
+      # 设置任务的绝对超时时间为当前时间 + 2 秒
+      when = loop.time() + 2
+  
+      try:
+          # 使用 asyncio.timeout_at 设置绝对超时时间
+          async with asyncio.timeout_at(when):
+              result = await example_task()
+              print(f"Task finished with result: {result}")
+      except asyncio.TimeoutError:
+          print("Task was cancelled due to timeout.")
+  
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task started
+  # Task was cancelled due to timeout.
+  ```
+
+  **使用场景：**  
+    * 当你需要在某个特定的时间点上（例如一个全局的超时时间点）对多个异步任务进行控制时，asyncio.timeout_at() 是非常有用的。
+    * 例如，你可以设定多个异步操作都必须在某个固定的时间之前完成，或者你可以与其他时间同步机制结合，确保异步任务在特定时间窗口内完成。
+
+* `coroutine asyncio.wait_for(aw, timeout)`   
+  类似于 asyncio.timeout()，但 asyncio.timeout() 使用方式更加简单。
+
+  **asyncio.timeout 与 asyncio.wait_for() 的区别：**    
+    * 代码风格：asyncio.timeout 使用上下文管理器风格，更加简洁自然，而 asyncio.wait_for() 则是函数调用风格；
+    * 语义清晰：asyncio.timeout 仅负责超时保护，而 asyncio.wait_for() 是一个包装函数，功能类似，但可能显得冗长；
+
+  **参数：**  
+    * aw：这个参数是一个可等待的对象，通常是一个协程或 Future 对象，它代表异步任务；
+    * timeout：这是一个浮点数，表示等待任务完成的最长时间。如果设置为 None，则不会有超时限制；
+    * 返回值：它返回 aw 的结果，如果 aw 在指定时间内完成；
+    * 异常：如果 aw 在 timeout 时间内没有完成，抛出 asyncio.TimeoutError 异常；
+
+  **示例：**    
+  ```python
+  import asyncio
+  
+  async def example_task():
+      print("Task started")
+      await asyncio.sleep(3)  # 模拟一个耗时3秒的任务
+      print("Task completed")
+      return "Task result"
+  
+  async def main():
+      try:
+          # 使用 asyncio.wait_for 设置超时为2秒
+          result = await asyncio.wait_for(example_task(), timeout=2.0)
+          print(f"Task finished with result: {result}")
+      except asyncio.TimeoutError:
+          print("Task took too long and was cancelled due to timeout.")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task started
+  # Task took too long and was cancelled due to timeout.
+  ```
+
+#### 21.2.2.9 任务等待
+
+* `coroutine asyncio.wait(aws, *, timeout=None, return_when=ALL_COMPLETED)`    
+   asyncio.wait() 是 Python 的 asyncio 库中用于并发运行多个异步任务的函数。aws 可迭代对象中的 Future 和 Task 实例，并根据指定的条件返回结果。此函数可以用于并行处理多个异步任务，并在某个条件满足时返回结果。      
+  **用法：**  
+  ```
+  done, pending = await asyncio.wait(aws, *, timeout=None, return_when=ALL_COMPLETED)
+  ```
+  **参数：**    
+    * aws：可迭代对象 Future 和 Task 实例；
+    * timeout：可选参数，表示等待的最长时间（以秒为单位）。如果在指定的时间内没有完成，函数将返回已完成的任务和未完成的任务，与 wait_for() 不同，wait() 在超时发生时不会取消可等待对象；
+    * return_when：指定何时返回结果，可以是以下几个常量之一：
+        * `asyncio.FIRST_COMPLETED`：函数将在任意可等待对象结束或取消时返回；
+        * `asyncio.FIRST_EXCEPTION`：该函数将在任何 future 对象通过引发异常而结束时返回。 如果没有任何 future 对象引发引发那么它将等价于 ALL_COMPLETED；
+        * `asyncio.ALL_COMPLETED（默认）`：函数将在所有可等待对象结束或取消时返回；
+  **返回值：**  
+    * 返回两个 Task/Future 集合: 其中 done 是已完成的任务，pending 是尚未完成的任务；
+
+  **示例：**   
+  ```python
+  import asyncio
+  
+  
+  async def example_task(name, delay):
+      print(f"Task {name} started")
+      await asyncio.sleep(delay)
+      print(f"Task {name} completed")
+      return name
+  
+  
+  async def main():
+      # 使用 asyncio.create_task() 创建任务
+      tasks = [
+          asyncio.create_task(example_task("A", 1)),
+          asyncio.create_task(example_task("B", 2)),
+          asyncio.create_task(example_task("C", 3)),
+      ]
+  
+      # 使用 asyncio.wait 等待所有任务完成，设置超时为2秒
+      done, pending = await asyncio.wait(tasks, timeout=2, return_when=asyncio.ALL_COMPLETED)
+  
+      print("\nResults:")
+      for task in done:
+          print(f"{task.result()} completed")
+  
+      if pending:
+          print("Pending tasks:")
+          for task in pending:
+              print(f"{task}")
+  
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task A started
+  # Task B started
+  # Task C started
+  # Task A completed
+  # 
+  # Results:
+  # A completed
+  # Pending tasks:
+  # <Task pending name='Task-3' coro=<example_task() running at /home/bolean/workspace/examples/python-tricks/src/asyncio_demo21_01.py:661> wait_for=<Future finished result=None>>
+  # <Task pending name='Task-4' coro=<example_task() running at /home/bolean/workspace/examples/python-tricks/src/asyncio_demo21_01.py:661> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+  # Task B completed  # 不会自动取消未完成的任务
+  ```
+
+* `asyncio.as_completed(aws, *, timeout=None)`  
+  `asyncio.as_completed()` 是一个异步迭代器，它可以在多个任务（aws，即一组可等待对象）中逐个获取已完成任务的结果。与 asyncio.gather() 不同，asyncio.as_completed() 按任务完成的顺序返回结果，而不是按它们在列表中的顺序。
+
+  **参数：**  
+    * aws：一组可等待对象（通常是协程或 Task），传递的是任务列表，在异步迭代期间，将为不属于 Task 或 Future 对象的可等待对象产出隐式创建的任务。
+    * timeout（可选）：如果设置了超时，当某些任务在超时前未完成时，它们将不会被返回，并会抛出 asyncio.TimeoutError；
+
+  **示例：**  
+  
+  ```python
+  import asyncio
+  
+  async def example_task(name, delay):
+      print(f"Task {name} started")
+      await asyncio.sleep(delay)
+      print(f"Task {name} completed")
+      return name
+  
+  async def main():
+      # 使用 asyncio.create_task 创建任务
+      tasks = [
+          asyncio.create_task(example_task("A", 3)),
+          asyncio.create_task(example_task("B", 1)),
+          asyncio.create_task(example_task("C", 2)),
+      ]
+      # 使用 asyncio.as_completed 以任务完成的顺序处理任务
+      for completed_task in asyncio.as_completed(tasks):
+          result = await completed_task  # 获取已完成任务的结果
+          print(f"Task {result} has finished")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task A started
+  # Task B started
+  # Task C started
+  # Task B completed
+  # Task B has finished
+  # Task C completed
+  # Task C has finished
+  # Task A completed
+  # Task A has finished
+  ```
+
+  带 timeout 参数的示例：  
+  ```python
+  import asyncio
+  
+  async def example_task(name, delay):
+      print(f"Task {name} started")
+      await asyncio.sleep(delay)
+      print(f"Task {name} completed")
+      return name
+  
+  async def main():
+      # 使用 asyncio.create_task 创建任务
+      tasks = [
+          asyncio.create_task(example_task("A", 3)),
+          asyncio.create_task(example_task("B", 5)),
+          asyncio.create_task(example_task("C", 1)),
+      ]
+      # 使用 asyncio.as_completed 并设置超时
+      try:
+          for completed_task in asyncio.as_completed(tasks, timeout=4):
+              result = await completed_task
+              print(f"Task {result} has finished")
+      except asyncio.TimeoutError:
+          print("Some tasks did not complete within the timeout period")
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # Task A started
+  # Task B started
+  # Task C started
+  # Task C completed
+  # Task C has finished
+  # Task A completed
+  # Task A has finished
+  # Some tasks did not complete within the timeout period
+  ```
+
+#### 21.2.2.10 线程化异步任务
+
+`coroutine asyncio.to_thread(func, /, *args, **kwargs)` 在不同的线程中异步地运行函数 func，此函数提供的任何 *args 和 **kwargs 会被直接传给 func。 并且，当前 contextvars.Context 会被传播，允许在不同的线程中访问来自事件循环的上下文变量。返回一个可被等待以获取 func 的最终结果的协程。这个协程函数主要是用于执行在其他情况下会阻塞事件循环的 IO 密集型函数/方法。   
+
+例如:  
+
+```python
+import asyncio
+import time
+
+
+def blocking_io():
+    print(f"start blocking_io at {time.strftime('%X')}")
+    time.sleep(1)
+    print(f"blocking_io complete at {time.strftime('%X')}")
+
+
+async def main():
+    print(f"started main at {time.strftime('%X')}")
+
+    await asyncio.gather(
+        asyncio.to_thread(blocking_io),
+        asyncio.sleep(1))
+
+    print(f"finished main at {time.strftime('%X')}")
+
+
+asyncio.run(main())
+
+# 输出：
+# started main at 18:17:14
+# start blocking_io at 18:17:14
+# blocking_io complete at 18:17:15
+# finished main at 18:17:15
+```
+
+在任何协程中直接调用 blocking_io() 将会在调用期间阻塞事件循环，导致额外的 1 秒运行时间。 但是，通过改用 asyncio.to_thread()，我们可以在单独的线程中运行它从而不会阻塞事件循环。因此只需要 1 秒。  
+
+【备注】 由于 GIL 的存在，asyncio.to_thread() 通常只能被用来将 IO 密集型函数变为非阻塞的。 但是，对于会释放 GIL 的扩展模块或无此限制的替代性 Python 实现来说，asyncio.to_thread() 也可被用于 CPU 密集型函数。
+
+示例：将多个阻塞任务异步执行，最长耗时任务作为脚本花费时间  
+
+假设有多个阻塞操作需要并发执行，可以使用 asyncio.gather() 与 asyncio.to_thread() 结合运行多个同步任务。
+
+```python
+import asyncio
+import time
+
+
+def blocking_io(name, delay):
+    print(f"Task {name} start blocking_io at {time.strftime('%X')}")
+    time.sleep(delay)
+    print(f"Task {name} blocking_io complete at {time.strftime('%X')}")
+
+
+async def main():
+    print(f"started main at {time.strftime('%X')}")
+    # asyncio.gather()：允许多个异步任务同时运行
+    await asyncio.gather(
+        # asyncio.to_thread()：将每个阻塞任务放入不同的线程，以并发的方式执行多个阻塞操作
+        asyncio.to_thread(blocking_io, 'A', 1),
+        asyncio.to_thread(blocking_io, 'B', 3),
+        asyncio.to_thread(blocking_io, 'C', 2))
+
+    print(f"finished main at {time.strftime('%X')}")
+
+asyncio.run(main())
+
+# 输出：
+# started main at 11:19:16
+# Task A start blocking_io at 11:19:16
+# Task B start blocking_io at 11:19:16
+# Task C start blocking_io at 11:19:16
+# Task A blocking_io complete at 11:19:17
+# Task C blocking_io complete at 11:19:18
+# Task B blocking_io complete at 11:19:19
+# finished main at 11:19:19
+```
+
+#### 21.2.2.11 跨线程调度
+
+`asyncio.run_coroutine_threadsafe(coro, loop)` 允许从一个非事件循环线程中，将协程提交给另一个线程中的事件循环执行（线程安全），并返回一个 concurrent.futures.Future 对象，用于跟踪协程的状态或结果。     
+
+**参数：**  
+  * coro：要运行的协程对象；
+  * loop：协程要运行的事件循环；
 
 **返回值：**  
-  * 返回一个工厂函数，可以用于生成任务对象；
+返回一个 concurrent.futures.Future 对象，可用于同步地检查协程执行的结果，通过 Future.result() 可以获取执行结果，Future.exception() 用于捕获异常。  
 
-**示例：**
-TODO： 代补充
+**特点：**  
+  * 线程安全：允许在非事件循环线程中调用，主要用于跨线程将协程提交到特定的事件循环；
+  * 适合多线程环境：例如在 GUI 应用程序或多线程后台任务中，跨线程调用 asyncio 协程；
+
+**示例代码**  
+
+```
+# 创建一个协程，该协程等待 1 秒后返回值 3
+coro = asyncio.sleep(1, result=3)
+
+# 将协程提交给指定的事件循环 loop
+future = asyncio.run_coroutine_threadsafe(coro, loop)
+
+# 等待协程的结果，设置一个可选的超时参数（timeout）
+assert future.result(timeout) == 3
+```
+代码片段解释：  
+
+* `coro = asyncio.sleep(1, result=3)`：
+  创建一个协程 coro，使用 asyncio.sleep() 来模拟等待 1 秒钟，并指定 result=3。  
+  asyncio.sleep() 是一个常用的异步函数，通常用于延迟执行。在这个例子中，它会在 1 秒后返回 3。  
+
+* `future = asyncio.run_coroutine_threadsafe(coro, loop)`：
+  使用 asyncio.run_coroutine_threadsafe() 函数，将 coro 提交到指定的事件循环 loop 中运行。  
+  run_coroutine_threadsafe() 会返回一个 concurrent.futures.Future 对象，称为 future，它可以同步地跟踪协程的状态。  
+  future 对象允许在其他非事件循环线程中访问协程的执行结果。  
+
+* `assert future.result(timeout) == 3`：
+  调用 future.result(timeout) 方法等待协程的执行结果，timeout 参数（可选）定义了最长等待时间。  
+  future.result() 是一个同步方法，会阻塞当前线程直到获得结果或超时。  
+  assert 语句确保返回的结果为 3，否则会引发 AssertionError。  
+
+如果在协程内产生了异常，通知返回的 Future 对象。可被用来取消事件循环中的任务:
+
+```
+try:
+    # 等待 future 的结果，设置一个超时时间
+    result = future.result(timeout)
+except TimeoutError:
+    # 如果在指定的 timeout 时间内没有获得结果，则捕获 TimeoutError
+    print('The coroutine took too long, cancelling the task...')
+    # 取消 future，以避免不必要的等待
+    future.cancel()
+except Exception as exc:
+    # 如果协程执行中出现了其他异常，则捕获该异常
+    print(f'The coroutine raised an exception: {exc!r}')
+else:
+    # 如果协程在规定时间内正常执行完毕并返回结果
+    print(f'The coroutine returned: {result!r}')
+```
+
+完整示例：  
+```python
+import asyncio
+import threading
+
+# 定义一个示例协程
+async def example_coroutine():
+    print("Coroutine started")
+    await asyncio.sleep(2)  # 模拟一个耗时 2 秒的任务
+    print("Coroutine finished")
+    return "Task result"
+
+# 运行事件循环的函数
+def start_loop(loop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+
+# 创建一个新的事件循环，并在单独的线程中运行它
+loop = asyncio.new_event_loop()
+loop_thread = threading.Thread(target=start_loop, args=(loop,))
+loop_thread.start()
+
+# 使用 asyncio.run_coroutine_threadsafe 提交协程任务到事件循环中
+coro = example_coroutine()
+future = asyncio.run_coroutine_threadsafe(coro, loop)
+
+# 处理 future 结果的代码
+try:
+    # 等待协程的结果，指定超时时间 3 秒
+    result = future.result(3)
+except asyncio.TimeoutError:
+    # 超时处理
+    print('The coroutine took too long, cancelling the task...')
+    future.cancel()  # 尝试取消任务
+except Exception as exc:
+    # 其他异常处理
+    print(f'The coroutine raised an exception: {exc!r}')
+else:
+    # 正常返回结果
+    print(f'The coroutine returned: {result!r}')
+
+# 停止事件循环
+loop.call_soon_threadsafe(loop.stop)
+loop_thread.join()
+
+# 输出：
+# Coroutine started
+# Coroutine finished
+# The coroutine returned: 'Task result'
+```
+
+#### 21.2.2.12 检查 & 管理协程/任务执行状态或类型
+
+* `asyncio.current_task(loop=None)`  
+  
+  **描述**：返回当前正在运行的 Task 实例。如果当前没有运行的任务，则返回 None；  
+  
+  **参数**： 
+    * loop（可选）：事件循环实例，如果 loop 为 None 则会使用 get_running_loop() 获取当前事件循环；  
+    
+  **用途**：在异步代码块中检查当前任务的状态或属性；  
+  **示例：**  
+  ```python
+  import asyncio
+  
+  async def task():
+      # 获取当前正在运行的任务
+      current_task = asyncio.current_task()
+      print(f"Current task: {current_task}")
+  
+      # 模拟异步工作
+      await asyncio.sleep(1)
+      print("Coroutine finished")
+  
+  async def main():
+      await task()
+  
+  asyncio.run(main())
+  ```
+
+* `asyncio.current_task(loop=None)`  
+  返回事件循环所运行的未完成的 Task 对象的集合。如果 loop 为 None，则会使用 get_running_loop() 获取当前事件循环。  
+  **示例：**  
+  ```python
+  import asyncio
+  
+  
+  async def task(name):
+      print(f"{name} started")
+      await asyncio.sleep(2)
+      print(f"{name} finished")
+  
+  
+  async def main():
+      task1 = asyncio.create_task(task("Task 1"))
+      task2 = asyncio.create_task(task("Task 2"))
+  
+      # 获取所有未完成的任务
+      tasks = asyncio.all_tasks()
+      print(f"All tasks: {tasks}")
+  
+      await task1
+      await task2
+  
+  asyncio.run(main())
+  ```
+
+* `asyncio.iscoroutine(obj)`    
+  检查对象 obj 是否是协程对象。如果是，则返回 True；否则返回 False。  
+
+  **示例：**  
+  ```python
+  import asyncio
+  
+  async def sample_coroutine():
+      await asyncio.sleep(1)
+  
+  # 检查是否为协程对象
+  coro = sample_coroutine()
+  print(asyncio.iscoroutine(coro))  # True
+  
+  # 检查普通函数
+  def regular_function():
+      pass
+  
+  print(asyncio.iscoroutine(regular_function))  # False
+  ```
