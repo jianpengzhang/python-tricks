@@ -11056,7 +11056,7 @@ loop_thread.join()
   ```
 
 * `asyncio.iscoroutine(obj)`    
-  检查对象 obj 是否是协程对象。如果是，则返回 True；否则返回 False。  
+  检查对象 obj 是否是协程对象，如果是，则返回 True，否则返回 False。  
 
   **示例：**  
   ```python
@@ -11075,3 +11075,486 @@ loop_thread.join()
   
   print(asyncio.iscoroutine(regular_function))  # False
   ```
+
+#### 21.2.2.13 Task 对象
+
+`class asyncio.Task(coro, *, loop=None, name=None, context=None, eager_start=False)` 是 asyncio 的基本任务对象，用于包装并运行协程，它将协程转换为一个任务，允许协程在事件循环中异步执行。
+
+**参数：**  
+  * coro: 必需参数，执行的协程对象；
+  * loop: (可选) 指定任务所属的事件循环，若不传入，则使用默认事件循环；
+  * name: (可选) 任务的名称，用于调试或日志记录，默认为 Task-<id> 格式；
+  * context: (可选) contextvars.Context 对象，控制任务执行时的上下文；
+  * eager_start: (可选) 默认值为 False。当设置为 True 时，任务在创建时立即同步执行，直到遇到第一个 await 表达式，设置 eager_start 可以减少事件循环的调度开销，提高执行性能，适用于无需等待的短期任务；  
+    工作原理：eager_start=True 时，任务在创建时就开始执行协程代码，并在遇到第一个阻塞操作（如 await 表达式）时暂停，将任务放入事件循环继续调度。这对于短期任务可以提升性能，但对于长时间运行的任务应谨慎使用，以避免阻塞主线程；  
+    使用建议：eager_start=True 适合短时、同步完成的任务，避免事件循环开销，对于长时间运行的任务，建议保持 eager_start=False，将任务交由事件循环管理，以避免阻塞主线程；
+  
+**支持函数**  
+  *  `Task.cancel()：` 取消任务的执行，调用后，任务会引发 asyncio.CancelledError 异常；    
+    `task.cancel()  # 尝试取消任务`  
+  * `Task.done():` 检查任务是否已完成，完成时返回 True，否则返回 False；  
+    ```
+    if task.done():
+        print("Task is complete.")
+
+    ```
+  * `Task.result():` 获取任务执行过程中抛出异常，若任务未完成或未引发异常，则返回 None，用于检查任务是否在执行过程中遇到错误；  
+    ```
+    if task.done() and task.exception():
+        print(f"Task raised an exception: {task.exception()}")
+    ```
+    
+  * `Task.get_name():` 返回任务的名称，默认为 Task-<id>，可以用于调试;  
+  * `Task.set_name(name)`: 设置任务的名称，便于调试和日志记录;
+  * `Task.add_done_callback(callback)`: 为任务添加完成回调函数。任务完成后会自动调用该函数，并传递 task 实例作为参数。在任务结束后执行特定操作。  
+    ```python
+    def on_task_done(task):
+        print("Task completed!")
+
+    task.add_done_callback(on_task_done)
+    ```
+  * `Task.cancelled():` 判断任务是否已被取消，任务被取消时返回 True，否则返回 False。
+    ```python
+    if task.cancelled():
+        print("Task was cancelled.")
+    ```
+  * `Task.get_loop()`: 获取当前任务所属的事件循环。  
+    ```
+    loop = task.get_loop()
+    print(f"Task loop: {loop}")
+    ```
+
+### 21.3 asyncio streams（流）
+
+官方文档：https://docs.python.org/zh-cn/3.13/library/asyncio-stream.html#examples
+
+`asyncio` 提供了一组用于处理网络流（streams）的高效异步 API，主要包括 StreamReader 和 StreamWriter，用于处理 TCP 或 UDP 等 I/O 流。asyncio streams API 能够帮助用户在事件循环中实现非阻塞的 I/O 操作，并简化网络应用的开发。
+
+**核心组件**  
+  * `asyncio.StreamReader`：用于读取数据流（例如，从网络套接字接收数据）;
+  * `asyncio.StreamWriter`：用于写入数据流（例如，将数据发送到网络套接字）;
+  * `asyncio.open_connection(host, port)`：用于创建 TCP 连接，返回一个 (reader, writer) 元组;
+
+**主要方法和用法**  
+  * 创建一个 TCP 客户端连接  
+    `coroutine asyncio.open_connection(host=None, port=None, *, limit=None, ssl=None, family=0, proto=0, flags=0, sock=None, local_addr=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, happy_eyeballs_delay=None, interleave=None)` 方法可用于创建一个 TCP 连接，返回一个包含 StreamReader 和 StreamWriter 的元组。
+    * `host`: 目标主机地址；
+    * `port`: 目标端口号；
+    * `limit`: 确定返回的 StreamReader 实例使用的缓冲区大小限制，默认情况下，limit 设置为 64 KiB 。
+    
+    **示例：**  
+    ```python
+    import asyncio
+    
+    async def tcp_echo_client(message):
+        # 创建一个 TCP 连接,返回一个包含 StreamReader 和 StreamWriter 的元组
+        reader, writer = await asyncio.open_connection(
+            '127.0.0.1', 8888)
+    
+        print(f'Send: {message!r}')
+        # 将字节数据写入流
+        writer.write(message.encode())
+        # 刷新写入的缓冲区，确保数据发送
+        await writer.drain()
+    
+        # 从流中读取 n 个字节的数据。若 n 未指定，则会读取所有可用数据。
+        data = await reader.read(100)
+        print(f'Received: {data.decode()!r}')
+    
+        print('Close the connection')
+        # 关闭流
+        writer.close()
+        # 等待流完全关闭
+        await writer.wait_closed()
+    
+    asyncio.run(tcp_echo_client('Hello World!'))
+    ```
+    
+
+  * 创建一个 TCP 服务器    
+    `coroutine asyncio.start_server(client_connected_cb, host=None, port=None, *, limit=None, family=socket.AF_UNSPEC, flags=socket.AI_PASSIVE, sock=None, backlog=100, ssl=None, reuse_address=None, reuse_port=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)` 方法用于启动一个 TCP 套接字服务器，当客户端连接时会调用回调函数 client_connected_cb。  
+      
+    当一个新的客户端连接被建立时，回调函数 client_connected_cb 会被调用，该函数会接收到一对参数 (reader, writer) ，reader是类 StreamReader 的实例，而writer是类 StreamWriter 的实例。  
+
+      * `client_connected_cb`：一个回调函数，用于处理客户端连接，即可以是普通的可调用对象也可以是一个协程函数，如果它是一个协程函数，它将自动作为 Task 被调度。
+      * `host`：服务器主机地址;  
+      * `port`：服务器端口号;  
+      * `limit`：确定返回的 StreamReader 实例使用的缓冲区大小限制，默认情况下，limit 设置为 64 KiB；  
+    
+      **示例：**  
+    
+      实现了一个简单的 TCP 服务器，监听在 127.0.0.1:8888 ，当客户端连接并发送数据时，服务器将读取数据，将其回显给客户端并关闭连接。
+      ```python
+      import asyncio
+    
+      async def handle_echo(reader, writer):
+          """
+          异步协程函数，每当有客户端连接到服务器时，就会创建一个新的任务来运行这个函数，该函数负责处理客户端的每个连接请求。
+          :param reader: StreamReader 对象，用于从客户端读取数据
+          :param writer: StreamWriter 对象，用于向客户端写数据
+          :return:
+          """
+          # 从客户端读取最多 100 字节的数据
+          data = await reader.read(100)
+          # 将接收到的字节数据解码为字符串
+          message = data.decode()
+          # 获取客户端的地址信息
+          addr = writer.get_extra_info('peername')
+          # 接收到的消息和客户端地址打印到控制台
+          # {!r}就是使用format语法时候的%r，因此，只需要关注 %r 就好
+          # %r 表示的用 repr() 处理；类似于的%s表示用str()处理一样
+          print(f"Received {message!r} from {addr!r}")
+    
+          print(f"Send: {message!r}")
+          # 将收到的数据回写给客户端
+          writer.write(data)
+          # 确保数据已完全写入（刷新写缓冲区）
+          await writer.drain()
+    
+          print("Close the connection")
+          # 关闭连接，并调用 await writer.wait_closed() 等待连接完全关闭
+          writer.close()
+          await writer.wait_closed()
+    
+      async def main():
+          """
+          用于启动 TCP 服务器
+          :return:
+          """
+          # 创建了一个 TCP 服务器，该服务器监听 127.0.0.1:8888 并调用 handle_echo 处理客户端连接
+          # asyncio.start_server：异步地创建并启动服务器
+          # handle_echo：指定每个客户端连接时的处理函数
+          # '127.0.0.1' 和 8888：监听的地址和端口
+          server = await asyncio.start_server(
+              handle_echo, '127.0.0.1', 8888)
+          # server.sockets 是服务器所使用的套接字列表，通过 getaddrinfo() 获取其地址并打印到控制台
+          addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
+          print(f'Serving on {addrs}')
+    
+          # async with server 上下文管理器用于安全管理服务器生命周期
+          async with server:
+              # 将服务器保持运行，直到手动停止
+              await server.serve_forever()
+      # 是 Python 3.7 引入的便捷方法，自动创建事件循环并启动 main() 协程，在事件循环中，服务器会保持监听状态，准备处理连接请求。
+      asyncio.run(main())
+      ```
+      
+  * Unix 套接字  
+    `coroutine asyncio.open_unix_connection(path=None, *, limit=None, ssl=None, sock=None, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)`  
+    建立一个 Unix 套接字连接并返回 (reader, writer) 这对返回值，与 open_connection() 相似，但是是在 Unix 套接字上的操作。  
+    
+    `coroutine asyncio.start_unix_server(client_connected_cb, path=None, *, limit=None, sock=None, backlog=100, ssl=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None, start_serving=True)`  
+    启动一个 Unix 套接字服务，与 start_server() 相似，但是是在 Unix 套接字上的操作。
+
+**StreamReader 介绍**  
+  * `await reader.read(n)`：从 IO 流中读取 n 个字节的数据。若 n 未指定或设为 -1，则会读取所有可用数据，一直读取到 EOF，然后返回所读取的全部 byte，如果 n 为 0，则立即返回一个空 bytes 对象；
+  * `await reader.readline()`：读取一行数据，直到换行符，“行”指的是以 \n 结尾的字节序列；
+  * `await reader.readexactly(n)`：精确读取 n 个字节的数据，若未读取到则会引发 IncompleteReadError；
+  * `readuntil(separator=b'\n')`：读取数据直至遇到 separator;
+
+**StreamWriter 介绍**  
+  * `writer.write(data)`：将字节数据写入流，此方法应当与 drain() 方法一起使用；
+  * `await writer.drain()`：刷新写入的缓冲区，确保数据发送;
+  * `await writelines(data)`： 将一个字节串列表（或任何可迭代对象）写入流；
+  * `writer.close()`：关闭流;
+  * `await writer.wait_closed()`：等待流完全关闭;
+  * `get_extra_info(name, default=None)`:访问可选的传输信息,详情参见 [BaseTransport.get_extra_info()](https://docs.python.org/zh-cn/3.13/library/asyncio-protocol.html#asyncio.BaseTransport.get_extra_info)；
+  * `start_tls(sslcontext, *, server_hostname=None, ssl_handshake_timeout=None, ssl_shutdown_timeout=None)`：将现有基于流的连接升级到 TLS；
+  * `is_closing`: 如果流已被关闭或正在被关闭则返回 True;
+
+**示例**  
+
+* 示例一：  
+
+  client.py:  
+  ```python
+  import asyncio
+  
+  async def tcp_client():
+      reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+      print("Connection established.")
+  
+      writer.write(b'Hello, server!')
+      await writer.drain()
+  
+      data = await reader.read(100)
+      print(f'Received: {data.decode()}')
+  
+      writer.close()
+      await writer.wait_closed()
+  
+  asyncio.run(tcp_client())
+  ```
+  
+  server.py:  
+  ```python
+  import asyncio
+  
+  async def handle_client(reader, writer):
+      data = await reader.read(100)
+      message = data.decode()
+      print(f"Received {message} from client.")
+  
+      writer.write(b"Hello, client!")
+      await writer.drain()
+  
+      writer.close()
+      await writer.wait_closed()
+  
+  async def tcp_server():
+      server = await asyncio.start_server(handle_client, '127.0.0.1', 8888)
+      print("Server running on 127.0.0.1:8888")
+  
+      async with server:
+          await server.serve_forever()
+  
+  asyncio.run(tcp_server())
+  ```
+
+* 示例二：获取 HTTP 标头  
+  查询命令行传入 URL 的 HTTP 标头。
+  ```python
+  import asyncio
+  import urllib.parse
+  import sys
+  
+  async def print_http_headers(url):
+      url = urllib.parse.urlsplit(url)
+      if url.scheme == 'https':
+          reader, writer = await asyncio.open_connection(
+              url.hostname, 443, ssl=True)
+      else:
+          reader, writer = await asyncio.open_connection(
+              url.hostname, 80)
+  
+      query = (
+          f"HEAD {url.path or '/'} HTTP/1.0\r\n"
+          f"Host: {url.hostname}\r\n"
+          f"\r\n"
+      )
+  
+      writer.write(query.encode('latin-1'))
+      while True:
+          line = await reader.readline()
+          if not line:
+              break
+  
+          line = line.decode('latin1').rstrip()
+          if line:
+              print(f'HTTP header> {line}')
+  
+      # Ignore the body, close the socket
+      writer.close()
+      await writer.wait_closed()
+  
+  url = sys.argv[1]
+  asyncio.run(print_http_headers(url))
+  ```
+  用法：  
+  ```text
+  python example.py http://example.com/path/page.html
+  
+  或使用 HTTPS:
+  
+  python example.py https://example.com/path/page.html
+  ```
+
+* 示例三：注册一个打开的套接字以等待使用流的数据
+
+  ```python
+  import asyncio
+  import socket
+  
+  async def wait_for_data():
+      # 获取一个指向当前事件循环的引用
+      # 因为我们想要访问低层级的 API。
+      loop = asyncio.get_running_loop()
+  
+      # 创建一对已接连的套接字。
+      rsock, wsock = socket.socketpair()
+  
+      # 注册打开的套接字以等待数据。
+      reader, writer = await asyncio.open_connection(sock=rsock)
+  
+      # 模拟从网络接收数据
+      loop.call_soon(wsock.send, 'abc'.encode())
+  
+      # 等待数据
+      data = await reader.read(100)
+  
+      # 获得数据，我们已完成：关闭套接字
+      print("Received:", data.decode())
+      writer.close()
+      await writer.wait_closed()
+  
+      # 关闭第二个套接字
+      wsock.close()
+  
+  asyncio.run(wait_for_data())
+  ```
+
+### 21.4 同步原语
+
+官方文档：https://docs.python.org/zh-cn/3.13/library/asyncio-sync.html
+
+在 asyncio 中，同步原语主要用于管理协程之间的并发控制，以确保数据一致性、协调协程的执行顺序或对共享资源的访问。asyncio 提供了一些关键的同步原语，类似于多线程编程中的锁、事件和条件变量，但它们都是异步的，适合异步编程。
+
+#### 21.4.1 asyncio.Lock
+
+异步锁，用于确保协程对共享资源的独占访问。锁只能被一个协程持有，其他试图获取锁的协程会被阻塞，直到锁被释放。
+
+```python
+import asyncio
+
+async def worker(lock, name):
+    async with lock:  # 加锁
+        print(f'{name} 获得了锁')
+        await asyncio.sleep(1)
+        print(f'{name} 释放了锁')
+
+async def main():
+    lock = asyncio.Lock()
+    await asyncio.gather(
+        worker(lock, 'Worker 1'),
+        worker(lock, 'Worker 2')
+    )
+
+asyncio.run(main())
+
+# 输出：
+# Worker 1 获得了锁
+# Worker 1 释放了锁
+# Worker 2 获得了锁
+# Worker 2 释放了锁
+```
+
+这里，Worker 1 和 Worker 2 按顺序获得锁，确保不会同时访问资源。
+
+#### 21.4.2 asyncio.Event
+
+异步事件，用于在协程之间发送信号，事件初始状态为未设置，协程可以等待事件，直到事件被其他协程设置。
+
+```python
+import asyncio
+
+async def waiter(event):
+    print('等待事件设置...')
+    await event.wait()
+    print('事件已设置!')
+
+async def main():
+    event = asyncio.Event()
+    asyncio.create_task(waiter(event))
+    await asyncio.sleep(2)  # 模拟一些其他操作
+    print('设置事件')
+    event.set()  # 设置事件
+
+asyncio.run(main())
+
+# 输出：
+# 等待事件设置...
+# 设置事件
+# 事件已设置!
+```
+
+这里，waiter 协程在等待事件设置。当 main 函数调用 event.set() 时，waiter 继续执行。
+
+#### 21.4.3 asyncio.Condition
+异步条件变量，可以与锁配合使用，以便在某些条件成立时唤醒等待的协程。
+
+```python
+import asyncio
+
+async def consumer(condition):
+    async with condition:
+        print('等待条件满足...')
+        await condition.wait()  # 等待条件满足
+        print('条件满足，开始消费数据')
+
+async def producer(condition):
+    await asyncio.sleep(1)  # 模拟其他操作
+    async with condition:
+        print('条件已满足，通知消费者')
+        condition.notify()  # 通知等待的协程
+
+async def main():
+    condition = asyncio.Condition()
+    await asyncio.gather(consumer(condition), producer(condition))
+
+asyncio.run(main())
+
+# 输出：
+# 等待条件满足...
+# 条件已满足，通知消费者
+# 条件满足，开始消费数据
+```
+在这里，consumer 等待 condition 满足，直到 producer 调用 notify 以唤醒 consumer。
+
+#### 21.4.4 asyncio.Semaphore 和 asyncio.BoundedSemaphore
+
+信号量，用于限制并发访问资源的协程数量。Semaphore 可以限制同时运行的协程数，而 BoundedSemaphore 会在超过最大值时抛出异常。
+
+```python
+import asyncio
+
+async def worker(sem, name):
+    async with sem:# 信号量限制
+        print(f'{name} 获得了访问权限')
+        await asyncio.sleep(1)
+        print(f'{name} 释放了访问权限')
+
+
+async def main():
+    # 同时允许最多 2 个协程
+    semaphore = asyncio.Semaphore(2)
+    await asyncio.gather(
+        worker(semaphore, "Worker 1"),
+        worker(semaphore, "Worker 2"),
+        worker(semaphore, "Worker 3")
+    )
+
+asyncio.run(main())
+
+# 输出：
+# Worker 1 获得了访问权限
+# Worker 2 获得了访问权限
+# Worker 1 释放了访问权限
+# Worker 2 释放了访问权限
+# Worker 3 获得了访问权限
+# Worker 3 释放了访问权限
+```
+
+这里，通过信号量 semaphore 限制最多两个协程可以同时访问共享资源。
+
+#### 21.4.5 asyncio.Barrier
+
+Barrier 是一个同步原语，允许一组协程在特定同步点之前等待，直到所有协程都到达该点。
+
+```python
+import asyncio
+
+async def worker(barrier, name):
+    print(f'{name} 到达屏障')
+    await barrier.wait()  # 等待所有协程到达
+    print(f'{name} 跨过屏障')
+
+async def main():
+    barrier = asyncio.Barrier(3)  # 设置屏障为3个协程
+    await asyncio.gather(
+        worker(barrier, 'Worker 1'),
+        worker(barrier, 'Worker 2'),
+        worker(barrier, 'Worker 3')
+    )
+
+asyncio.run(main())
+
+# 输出：
+# Worker 1 到达屏障
+# Worker 2 到达屏障
+# Worker 3 到达屏障
+# Worker 3 跨过屏障
+# Worker 1 跨过屏障
+# Worker 2 跨过屏障
+```
+
+这里，所有协程在 await barrier.wait() 处等待，直到达到屏障的数量，然后一起继续。

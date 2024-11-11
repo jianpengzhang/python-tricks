@@ -95,3 +95,6 @@
     * [20.5 进程、线程、协程对比](docs/python_features.md#205-进程线程协程对比)
 * [21 asyncio 异步 I/O](docs/python_features.md#21-asyncio-异步-io)
   * [21.1 运行 asyncio 程序](docs/python_features.md#211-运行-asyncio-程序)
+  * [21.2 协程与任务](docs/python_features.md#212-协程与任务)
+  * [21.3 asyncio streams（流）](docs/python_features.md#213-asyncio-streams流)
+  * [21.4 同步原语](docs/python_features.md#214-同步原语)
