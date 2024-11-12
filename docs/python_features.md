@@ -11558,3 +11558,349 @@ asyncio.run(main())
 ```
 
 这里，所有协程在 await barrier.wait() 处等待，直到达到屏障的数量，然后一起继续。
+
+### 21.5 子进程
+
+在 Python 3.13 中，asyncio 提供了多个用于管理和操作子进程的工具，主要通过异步方式启动、通信和管理子进程，以便与异步任务无缝集成。子进程允许我们运行外部命令、执行脚本或利用多进程并行处理能力，同时仍然保持非阻塞的异步操作。
+
+如下例子，演示如何用 asyncio 运行一个 shell 命令并获取其结果:
+
+```python
+import asyncio
+
+async def run(cmd):
+    proc = await asyncio.create_subprocess_shell(
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE)
+
+    stdout, stderr = await proc.communicate()
+
+    print(f'[{cmd!r} exited with {proc.returncode}]')
+    if stdout:
+        print(f'[stdout]\n{stdout.decode()}')
+    if stderr:
+        print(f'[stderr]\n{stderr.decode()}')
+
+asyncio.run(run('ls ./'))
+
+
+# 输出：
+# ['ls ./' exited with 0]
+# [stdout]
+# adapter_pattern_demo19.py
+# aop_demo12.py
+```
+
+由于所有 asyncio 子进程函数都是异步的并且 asyncio 提供了许多工具用来配合这些函数使用，因此并行地执行和监视多个子进程十分容易。 
+
+修改上面例子同时运行多个命令:
+
+```text
+async def main():
+    await asyncio.gather(
+        run('ls ./'),
+        run('sleep 1; echo "hello"'))
+
+asyncio.run(main())
+```
+
+#### 21.5.1 创建子进程
+
+* `coroutine asyncio.create_subprocess_exec(program, *args, stdin=None, stdout=None, stderr=None, limit=None, **kwds)`  
+  通过 exec 方法创建子进程，*args 是要执行的命令及其参数，使用这种方式传入能避免 shell 注入的安全问题。
+
+  **参数说明**  
+  * `program`: 要执行的程序名称或路径，例如：'python3' 或其他可执行文件路径；
+  * `args`: 可选参数，程序的其他命令行参数，例如：'-m'、'http.server'；
+  * `stdin`: 可选，用于指定标准输入流的行为，可以设置为 asyncio.subprocess.PIPE（用于与子进程进行交互）、None（继承当前进程的标准输入）或 asyncio.subprocess.DEVNULL（不使用标准输入）；
+  * `stdout`: 可选，用于指定标准输出流的行为，可以设置为 asyncio.subprocess.PIPE（用于读取子进程输出）、None（继承当前进程的标准输出）或 asyncio.subprocess.DEVNULL（不使用标准输出）；
+  * `stderr`: 与 stdout 类似，控制标准错误流的行为；
+  * `limit`: 指定流的缓冲区大小，适用于数据量较大的场景；
+  * `kwds`: 其他关键字参数，这些参数将直接传递给 subprocess.Popen；
+
+  该方法返回一个 Process 对象，允许通过此对象与子进程进行通信、获取其状态以及等待其退出。
+
+  **示例：**  
+  使用 asyncio.create_subprocess_exec 启动一个子进程，并异步地从标准输出读取数据。
+  ```python
+  import asyncio
+  
+  async def run_subprocess():
+      # 启动一个子进程并执行 "ls -l" 命令
+      process = await asyncio.create_subprocess_exec(
+          'ls', '-l','./test',
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+  
+      # 异步读取标准输出和标准错误
+      stdout, stderr = await process.communicate()
+  
+      print(f'[stdout]\n{stdout.decode()}')
+      if stderr:
+          print(f'[stderr]\n{stderr.decode()}')
+  
+      # 打印子进程的退出状态码
+      print(f'Return code: {process.returncode}')
+  
+  # 启动事件循环并执行子进程
+  asyncio.run(run_subprocess())
+  
+  # 输出：
+  # [stdout]
+  # 总用量 0
+  # -rw-rw-r-- 1 bolean bolean 0 Nov 11 15:06 test.py
+  # 
+  # Return code: 0
+  ```
+  * 标准输入输出交互：设置 stdin=asyncio.subprocess.PIPE 后，可以使用 process.stdin.write() 和 await process.stdin.drain() 与子进程交互；类似地，使用 stdout=asyncio.subprocess.PIPE 后可以通过 await process.stdout.read() 读取子进程输出。
+  * 错误处理：通过捕获异常来处理子进程的错误，例如，如果子进程失败，可以通过 process.returncode 来检查非零退出码。
+
+* `coroutine asyncio.create_subprocess_shell(cmd, stdin=None, stdout=None, stderr=None, limit=None, **kwds)`  
+  通过 shell 方法创建子进程，接受完整的命令字符串 cmd，可以直接运行像 ls -l | grep .py 这样的复杂命令。  
+  
+  **参数说明**  
+  * `cmd`: 一个字符串，包含要执行的命令及其参数，例如："ls -l | grep py"；
+  * `stdin`: 控制标准输入流的行为，可以设置为 asyncio.subprocess.PIPE（用于与子进程进行输入输出交互），None（继承当前进程的标准输入）或 asyncio.subprocess.DEVNULL（不使用标准输入）；
+  * `stdout`: 控制标准输出流的行为，可以设置为 asyncio.subprocess.PIPE（用于读取子进程的输出），None（继承当前进程的标准输出）或 asyncio.subprocess.DEVNULL（不使用标准输出）；
+  * `stderr`: 与 stdout 类似，控制标准错误流的行为；
+  * `limit`: 指定流的缓冲区大小，在处理大量数据时有用；
+  * `kwds`: 其他关键字参数，直接传递给 subprocess.Popen；
+
+  返回一个 Process 对象，可以通过它与子进程进行通信，等待其完成或获取退出状态。  
+  **示例：**  
+  ```python
+  import asyncio
+  
+  async def run_shell_command():
+      # 启动一个子进程并执行命令
+      process = await asyncio.create_subprocess_shell(
+          'ls -l | grep test',  # 这是 shell 命令
+          stdout=asyncio.subprocess.PIPE,  # 读取标准输出
+          stderr=asyncio.subprocess.PIPE   # 读取标准错误
+      )
+  
+      # 异步地获取标准输出和标准错误
+      stdout, stderr = await process.communicate()
+  
+      # 输出结果
+      if stdout:
+          print(f'[stdout]\n{stdout.decode()}')
+      if stderr:
+          print(f'[stderr]\n{stderr.decode()}')
+  
+      # 打印子进程的退出状态码
+      print(f'Return code: {process.returncode}')
+  
+  # 启动事件循环并执行子进程
+  asyncio.run(run_shell_command())
+  
+  # 输出：
+  # [stdout]
+  # drwxrwxr-x 2 bolean bolean  4096 Nov 11 15:06 test
+  # 
+  # Return code: 0
+  ```
+
+  **常量解释**  
+  `asyncio.subprocess.PIPE`：可以传递给 stdin, stdout 或 stderr 形参，如果 PIPE 传递给 stdin 参数，则 Process.stdin 属性将会指向一个 StreamWriter 实例；如果 PIPE 传递给 stdout 或 stderr 参数，则 Process.stdout 和 Process.stderr 属性将会指向 StreamReader 实例;    
+  `asyncio.subprocess.STDOUT`: 可以用作 stderr 参数的特殊值，表示标准错误被重定向到标准输出;  
+  `asyncio.subprocess.DEVNULL`:可以用作 stdin, stdout 或 stderr 参数，将子进程的输入或输出流重定向到空设备（devnull），使得主进程忽略这些数据;
+
+  | 常量                        | 用途                                     | 示例应用场景                                  |
+  |-----------------------------|------------------------------------------|-------------------------------------------|
+  | `asyncio.subprocess.PIPE`   | 允许主进程与子进程通信                    | 读取子进程的输出或向子进程发送输入                  |
+  | `asyncio.subprocess.STDOUT` | 将子进程的标准错误合并到标准输出中        | 合并输出流，简化数据处理                             |
+  | `asyncio.subprocess.DEVNULL`| 丢弃子进程的 I/O 数据                  | 忽略子进程的所有输入和输出，比如执行任务后不关心结果的情况 |
+
+#### 21.5.2 更多示例
+
+* 示例一：  
+  使用 Process 类控制子进程并用 StreamReader 类从其标准输出读取信息。  
+  ```python
+  import asyncio
+  import sys
+  
+  
+  async def get_date():
+      code = 'import datetime; print(datetime.datetime.now())'
+  
+      # 创建子进程，重定向标准输出，至一个管道中
+      # sys.executable：返回当前Python解释器的完整路径：executable = '/home/bolean/workspace/py-env/py3.12-dev-env/bin/python3.12'
+      proc = await asyncio.create_subprocess_exec(
+          sys.executable, '-c', code,
+          stdout=asyncio.subprocess.PIPE)
+  
+      # 读取一行输出
+      data = await proc.stdout.readline()
+      # 删除 string 字符串末尾的指定字符，默认为空白符，包括空格、换行符、回车符、制表符
+      line = data.decode('ascii').rstrip()
+  
+      # 等待子进程退出
+      await proc.wait()
+      return line
+  
+  
+  date = asyncio.run(get_date())
+  print(f"Current date: {date}")
+  
+  # 输出：
+  # Current date: 2024-11-12 15:40:09.591518
+  ```
+
+* 示例二：使用 `asyncio.create_subprocess_exec` 启动子进程  
+  使用 create_subprocess_exec 运行一个简单的命令并获取输出。
+  ```
+  import asyncio
+  
+  async def run_command():
+      # 创建子进程运行 'echo Hello, World!'
+      process = await asyncio.create_subprocess_exec(
+          'echo', 'Hello, World!',
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+  
+      # 等待结束，读取输出和错误输出
+      stdout, stderr = await process.communicate()
+  
+      # 打印输出和错误输出
+      print(f'[stdout] {stdout.decode().strip()}')
+      if stderr:
+          print(f'[stderr] {stderr.decode().strip()}')
+  
+      # 打印返回码
+      print(f'Return code: {process.returncode}')
+  
+  asyncio.run(run_command())
+  
+  # 输出：
+  # [stdout] Hello, World!
+  # Return code: 0  
+  ```
+
+* 示例三：使用 asyncio.create_subprocess_shell 启动带有管道的子进程
+  ```python
+  import asyncio
+  
+  async def run_shell_command():
+      # 运行带有管道的 shell 命令
+      process = await asyncio.create_subprocess_shell(
+          'echo "Hello, World!" | grep World',
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+  
+      # 异步读取输出和错误输出
+      stdout, stderr = await process.communicate()
+  
+      print(f'[stdout] {stdout.decode().strip()}')
+      if stderr:
+          print(f'[stderr] {stderr.decode().strip()}')
+  
+      print(f'Return code: {process.returncode}')
+  
+  asyncio.run(run_shell_command())
+  
+  # [stdout] Hello, World!
+  # Return code: 0
+  ```
+
+* 示例四：与子进程进行异步交互  
+  向子进程发送输入，并异步读取它的输出。  
+  ```python
+  import asyncio
+  
+  async def interact_with_subprocess():
+      # 启动 Python 解释器子进程
+      process = await asyncio.create_subprocess_exec(
+          'python3', '-i',  # 交互模式
+          stdin=asyncio.subprocess.PIPE,
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+  
+      # 向 Python 解释器发送命令
+      process.stdin.write(b'print("Hello from child process")\n')
+      await process.stdin.drain()  # 确保命令被发送
+  
+      # 读取子进程的输出
+      stdout_line = await process.stdout.readline()
+      print(f'[stdout] {stdout_line.decode().strip()}')
+  
+      # 关闭子进程的标准输入，并等待它完成
+      process.stdin.close()
+      await process.wait()
+      print(f'Return code: {process.returncode}')
+  
+  asyncio.run(interact_with_subprocess())
+  
+  # 输出：
+  # [stdout] Hello from child process
+  # Return code: 0
+  ```
+
+* 示例五：异步处理多个子进程    
+  异步处理多个子进程，并等待所有子进程完成。  
+  ```python
+  import asyncio
+  
+  async def run_command(cmd):
+      process = await asyncio.create_subprocess_shell(
+          cmd,
+          stdout=asyncio.subprocess.PIPE,
+          stderr=asyncio.subprocess.PIPE
+      )
+      stdout, stderr = await process.communicate()
+      return cmd, process.returncode, stdout.decode().strip(), stderr.decode().strip()
+  
+  async def main():
+      commands = [
+          'echo "Hello, World!"',
+          'sleep 1; echo "Task 1 completed"',
+          'sleep 2; echo "Task 2 completed"'
+      ]
+  
+      tasks = [run_command(cmd) for cmd in commands]
+      results = await asyncio.gather(*tasks)
+  
+      for cmd, returncode, stdout, stderr in results:
+          print(f'\n[Command: {cmd}]')
+          print(f'Return code: {returncode}')
+          print(f'[stdout] {stdout}')
+          if stderr:
+              print(f'[stderr] {stderr}')
+  
+  asyncio.run(main())
+  
+  # 输出：
+  # [Command: echo "Hello, World!"]
+  # Return code: 0
+  # [stdout] Hello, World!
+  #
+  # [Command: sleep 1; echo "Task 1 completed"]
+  # Return code: 0
+  # [stdout] Task 1 completed
+  #
+  # [Command: sleep 2; echo "Task 2 completed"]
+  # Return code: 0
+  # [stdout] Task 2 completed
+  ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
