@@ -11895,7 +11895,11 @@ asyncio.run(main())
 （3）[传输和协议](https://docs.python.org/zh-cn/3.13/library/asyncio-protocol.html)  
 （4）[策略](https://docs.python.org/zh-cn/3.13/library/asyncio-policy.html)  
 
+## 22. lambda 函数
 
+在 Python 中，lambda 是一种用于创建匿名函数（也称为内联函数）的关键字。
+
+**语法**
 
 
 
