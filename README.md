@@ -100,3 +100,4 @@
   * [21.4 同步原语](docs/python_features.md#214-同步原语)
   * [21.5 子进程](docs/python_features.md#215-子进程)
   * [21.6 更多接口说明](docs/python_features.md#216-更多接口说明)
+* [22 lambda 函数](docs/python_features.md#22-lambda-函数)

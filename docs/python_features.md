@@ -11899,18 +11899,118 @@ asyncio.run(main())
 
 在 Python 中，lambda 是一种用于创建匿名函数（也称为内联函数）的关键字。
 
-**语法**
+**语法**  
+  ```
+  lambda 参数1, 参数2, ... : 表达式
+  ```
+  * 参数：可以有任意多个参数（包括可选参数）；
+  * 表达式：只能是单个表达式，不能包含语句或复杂逻辑，返回值是表达式的结果； 
 
+**特点**  
+  * 匿名性：无需显式定义函数名；
+  * 轻量级：适用于小型函数逻辑；
+  * 单行表达式：限制在单行内完成；
 
+**限制**  
+  * 不能包含多条语句：lambda 函数只能有一个表达式;  
+    ```python
+    lambda x: (x += 1)  # ❌ SyntaxError
+    ```
+  * 调试困难：没有函数名，无法轻松追踪或调试;   
+  * 复杂逻辑不适用：如条件分支和循环应使用普通函数;  
+  
+**常见示例**  
+  
+  * 示例一：基础用法  
+    ```python
+    add = lambda x, y: x + y
+    print(add(3, 4))
+    # 输出：7
+    ```
+    
+  * 示例二：结合 sorted() 进行自定义排序    
+    ```python
+    data = [{'name': 'Alice', 'age': 25}, {'name': 'Bob', 'age': 30}, {'name': 'Charlie', 'age': 20}]
+    # 按 age 升序排序
+    sorted_data = sorted(data, key=lambda x: x['age'])
+    print(sorted_data)
+    # 输出：[{'name': 'Charlie', 'age': 20}, {'name': 'Alice', 'age': 25}, {'name': 'Bob', 'age': 30}]    
+    ```
+    
+    备注：
+    ```
+    sorted(iterable, key=None, reverse=False)  
+    * iterable -- 可迭代对象;
+    * key -- 主要是用来进行比较的元素，只有一个参数，具体的函数的参数就是取自于可迭代对象中，指定可迭代对象中的一个元素来进行排序；
+    * reverse -- 排序规则，reverse = True 降序 ， reverse = False 升序（默认）；
+    ```
+  * 示例三： 配合 map() 和 filter()  
+    ```python
+    nums = [1, 2, 3, 4, 5]
+    
+    # 使用 map 进行平方操作
+    squared = list(map(lambda x: x ** 2, nums))
+    print(squared)  # 输出：[1, 4, 9, 16, 25]
+    
+    # 使用 filter 过滤偶数
+    evens = list(filter(lambda x: x % 2 == 0, nums))
+    print(evens)  # 输出：[2, 4]  
+    ```
+  * 示例四： 结合 reduce()（需要导入 functools 模块）
+    ```python
+    from functools import reduce
+    
+    # 计算列表的累乘
+    nums = [1, 2, 3, 4]
+    product = reduce(lambda x, y: x * y, nums)
+    print(product)  # 输出：24  
+    ```
 
+**使用技巧与注意事项**  
 
+  * 嵌套 lambda   
+    ```python
+    multiply = lambda x: lambda y: x - y
+    result = multiply(3)(5)
+    print(result)  # 输出：-2
+    ```
+  
+  * 使用三元表达式  
+    ```python
+    max_value = lambda x, y: x if x > y else y
+    print(max_value(10, 20))  # 输出：20
+    ```
 
+  * 与 dict 的动态计算结合  
+    ```python
+    operations = {
+        'add': lambda x, y: x + y,
+        'sub': lambda x, y: x - y,
+        'mul': lambda x, y: x * y,
+        'div': lambda x, y: x / y if y != 0 else 'undefined'
+    }
+    
+    print(operations['add'](10, 5))  # 输出：15
+    print(operations['div'](10, 0))  # 输出：undefined
+    ```
 
-
-
-
-
-
-
-
-
+**实际案例**    
+  
+  * 案例一：动态生成函数   
+    ```python
+    def power_func(n):
+        return lambda x: x**n
+    
+    square = power_func(2)  # 生成平方函数
+    cube = power_func(3)    # 生成立方函数
+    
+    print(square(4))  # 输出：16
+    print(cube(2))    # 输出：8
+    ```
+  * 案例二：数据处理流水线  
+    ```
+    # 计算流水线：平方 -> 加 3 -> 转为字符串
+    pipeline = lambda x: str((x**2) + 3)
+    result = list(map(pipeline, [1, 2, 3]))
+    print(result)  # 输出：['4', '7', '12']    
+    ```
