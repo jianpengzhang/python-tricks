@@ -11975,6 +11975,35 @@ asyncio.run(main())
     print(result)  # 输出：-2
     ```
   
+    **原理介绍**  
+      * 闭包（Closure）
+        在 Python 中，闭包是一种函数，其定义在另一个函数内部，并且可以访问外部函数的非局部变量，即使外部函数已返回。这种特性使得嵌套 lambda 函数可以通过外部变量保持状态。  
+        **示例：**    
+          ```python
+          def outer(x):
+              def inner(y):
+                  return x + y
+              return inner
+          
+          add_5 = outer(5)  # 返回闭包
+          print(add_5(3))   # 输出 8
+          ```
+          嵌套 lambda 是闭包概念的直接应用。
+      * 嵌套 lambda 原理
+        嵌套 lambda 的本质是通过返回另一个 lambda 函数，将当前作用域的变量捕获并延续到下一层。      
+        **示例：**  
+          ```python
+          nested_lambda = lambda x: lambda y: x + y
+          add_5 = nested_lambda(5)
+          print(add_5(3))  # 输出 8
+          ```
+          调用外层 lambda：当 nested_lambda(5) 被调用时，返回的是一个新的 lambda y: x + y，此时 x 被固定为 5；  
+          调用内层 lambda：对返回的 lambda 函数继续调用时，例如 add_5(3)，内层 y 被赋值为 3，返回 x + y 的结果；  
+          等价于：  
+          ```
+          def nested_lambda(x):
+            return lambda y: x + y
+          ```
   * 使用三元表达式  
     ```python
     max_value = lambda x, y: x if x > y else y
@@ -11994,6 +12023,25 @@ asyncio.run(main())
     print(operations['div'](10, 0))  # 输出：undefined
     ```
 
+  * 注意事项    
+    作用域和变量捕获：嵌套 lambda 会捕获外层作用域中的变量。需要注意的是，捕获的是变量本身，而不是其值：
+  
+    ```
+    funcs = []
+    for x in range(3):
+        funcs.append(lambda y: x + y)
+    print([f(10) for f in funcs])  # 输出 [12, 12, 12]
+    ```
+  
+    原因：lambda 捕获的是变量 x，而非每次迭代时的值。在循环结束时，x 的值为 2。    
+    解决办法： 使用默认参数强制捕获当前值：  
+  
+    ```
+    funcs = []
+    for x in range(3):
+        funcs.append(lambda y, x=x: x + y)  # 显式捕获当前 x
+    print([f(10) for f in funcs])  # 输出 [10, 11, 12]
+    ```
 **实际案例**    
   
   * 案例一：动态生成函数   
