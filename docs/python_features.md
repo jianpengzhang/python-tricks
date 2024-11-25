@@ -12062,3 +12062,119 @@ asyncio.run(main())
     result = list(map(pipeline, [1, 2, 3]))
     print(result)  # 输出：['4', '7', '12']    
     ```
+
+## 23. 函数式编程
+函数式编程是一种编程范式，强调使用不可变数据和无副作用的函数来构造程序。Python 并非纯函数式编程语言，但提供了一些特性，使得开发者可以应用函数式编程的理念。
+
+* 函数是一等公民  
+  Python 中，函数可以像变量一样被传递、赋值和作为其他函数的返回值或参数。  
+  ```python
+  def add(x, y):
+      return x + y
+  
+  def operate(func, a, b):
+      return func(a, b)
+  
+  result = operate(add, 3, 5)  # 使用函数作为参数
+  print(result)  # 输出: 8
+  ```
+  
+* 高阶函数  
+  高阶函数是以函数作为输入或输出的函数。  
+
+  * map() 对可迭代对象的每个元素应用函数，返回一个迭代器  
+    ```python
+    nums = [1, 2, 3, 4]
+    squared = map(lambda x: x ** 2, nums)
+    print(list(squared))  # 输出: [1, 4, 9, 16]
+    ```
+    
+  * filter() 根据函数的布尔返回值过滤可迭代对象的元素  
+    ````python
+    nums = [1, 2, 3, 4, 5]
+    evens = filter(lambda x: x % 2 == 0, nums)
+    print(list(evens))  # 输出: [2, 4]
+    ````
+    
+  * reduce() 通过连续应用函数，将可迭代对象简化为单一值
+    ```python
+    from functools import reduce
+
+    nums = [1, 2, 3, 4]
+    result = reduce(lambda x, y: x + y, nums)
+    print(result)  # 输出: 10
+    ```
+
+* 匿名函数（Lambda 函数）    
+  ```python
+  square = lambda x: x ** 2
+  print(square(5))  # 输出: 25
+  ```
+
+* 不可变数据    
+  函数式编程更倾向于操作不可变的数据结构，减少副作用。Python 提供了一些不可变数据类型，如 tuple 和 frozenset。  
+  ```python
+  def append_element(immutable_tuple, element):
+      return immutable_tuple + (element,)
+  
+  data = (1, 2, 3)
+  new_data = append_element(data, 4)
+  print(data)      # 输出: (1, 2, 3)
+  print(new_data)  # 输出: (1, 2, 3, 4)
+  ```
+  
+* 闭包  
+  闭包是指内嵌函数可以捕获其所在作用域的局部变量。  
+  ```python
+  def multiplier(factor):
+      def multiply_by(x):
+          return x * factor
+      return multiply_by
+  
+  double = multiplier(2)
+  print(double(5))  # 输出: 10
+  ```
+
+* 函数组合  
+  通过函数式编程，可以将多个函数组合起来执行复杂的逻辑。  
+  ```python
+  def increment(x):
+      return x + 1
+  
+  def double(x):
+      return x * 2
+  
+  def compose(f, g):
+      return lambda x: f(g(x))
+  
+  increment_then_double = compose(double, increment)
+  print(increment_then_double(3))  # 输出: 8
+  ```
+
+* 递归  
+  函数式编程中常用递归来替代循环。  
+  ```python
+  def factorial(n):
+      if n == 0:
+          return 1
+      return n * factorial(n - 1)
+  
+  print(factorial(5))  # 输出: 120
+  ```
+
+* 列表推导式  
+  列表推导式是一种简洁地生成列表的方式，具备函数式编程的特性。  
+  ```
+  nums = [1, 2, 3, 4]
+  squared = [x ** 2 for x in nums]
+  print(squared)  # 输出: [1, 4, 9, 16]
+  ```
+
+* 生成器表达式  
+  生成器表达式是一种延迟求值的方式，减少内存开销。  
+  ```python
+  nums = [1, 2, 3, 4]
+  squared_gen = (x ** 2 for x in nums)
+  for num in squared_gen:
+      print(num)  # 依次输出: 1, 4, 9, 16
+  ```
