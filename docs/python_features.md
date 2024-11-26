@@ -12178,3 +12178,223 @@ asyncio.run(main())
   for num in squared_gen:
       print(num)  # 依次输出: 1, 4, 9, 16
   ```
+  
+## 24. Python里的拷贝
+
+在 Python 中，拷贝（copy）指的是创建一个对象的副本。这通常用于在不修改原始对象的情况下进行操作。Python 提供了几种拷贝方式，分别适用于不同的情境，包括浅拷贝和深拷贝。
+
+### 24.1 浅拷贝（Shallow Copy）
+
+浅拷贝是指创建一个新的对象，但对于对象内部的元素，如果是可变对象（如列表、字典等），则这些元素的引用会被拷贝，而不是元素本身。因此，浅拷贝会共享某些内部对象。
+
+**常见方案**    
+  * copy() 方法；
+  * copy.copy() 函数；
+  * dict.copy()（适用于字典）；
+  * 使用切片（[:]）；
+
+**示例**  
+
+  ```
+  import copy
+  
+  # 使用 copy() 方法
+  original_list = [1, 2, [3, 4]]
+  shallow_copy_list = original_list.copy()
+  
+  print("原始列表:", original_list)
+  print("浅拷贝列表:", shallow_copy_list)
+  
+  # 修改浅拷贝中的子对象
+  shallow_copy_list[2][0] = 99
+  print("修改浅拷贝副本后:")
+  print("原始列表:", original_list)  # 原列表也会被影响
+  print("浅拷贝列表:", shallow_copy_list)
+  
+  # 使用 copy.copy()
+  original_dict = {'a': 1, 'b': {'x': 10, 'y': 20}}
+  shallow_copy_dict = copy.copy(original_dict)
+  
+  print("原始字典:", original_dict)
+  print("浅拷贝字典:", shallow_copy_dict)
+  
+  shallow_copy_dict['b']['x'] = 50
+  print("修改浅拷贝副本后:")
+  print("原始字典:", original_dict)  # 原字典会被修改
+  print("浅拷贝字典:", shallow_copy_dict)
+  
+  # 输出：
+  # 原始列表: [1, 2, [3, 4]]
+  # 浅拷贝列表: [1, 2, [3, 4]]
+  # 修改浅拷贝副本后:
+  # 原始列表: [1, 2, [99, 4]]
+  # 浅拷贝列表: [1, 2, [99, 4]]
+  # 原始字典: {'a': 1, 'b': {'x': 10, 'y': 20}}
+  # 浅拷贝字典: {'a': 1, 'b': {'x': 10, 'y': 20}}
+  # 修改浅拷贝副本后:
+  # 原始字典: {'a': 1, 'b': {'x': 50, 'y': 20}}
+  # 浅拷贝字典: {'a': 1, 'b': {'x': 50, 'y': 20}}
+  ```
+【注意】对于列表或字典的浅拷贝，如果其中的元素（如嵌套的列表或字典）是可变的，浅拷贝仍然共享这些元素的引用。因此，修改浅拷贝中的嵌套元素会影响到原始对象。
+
+### 24.2 深拷贝（Deep Copy）
+
+深拷贝是指递归地拷贝整个对象及其所有包含的对象。对于可变的元素，深拷贝会创建完全独立的副本，即原对象与拷贝对象之间不会共享任何元素的引用。
+
+**常见方案**    
+  * copy.deepcopy() 函数；
+
+**示例**  
+
+  ```python
+  import copy
+  
+  original_list = [1, 2, [3, 4]]
+  deep_copy_list = copy.deepcopy(original_list)
+  
+  print("原始列表:", original_list)
+  print("深拷贝列表:", deep_copy_list)
+  
+  # 修改深拷贝中的子对象
+  deep_copy_list[2][0] = 99
+  print("修改深拷贝副本：")
+  print("原始列表:", original_list)  # 原列表不会被影响
+  print("深拷贝列表:", deep_copy_list)
+  
+  # 对深拷贝的字典进行操作
+  original_dict = {'a': 1, 'b': {'x': 10, 'y': 20}}
+  deep_copy_dict = copy.deepcopy(original_dict)
+  
+  print("原始字典:", original_dict)
+  print("深拷贝字典:", deep_copy_dict)
+  
+  deep_copy_dict['b']['x'] = 50
+  print("修改深拷贝副本：")
+  print("原始字典:", original_dict)  # 原字典不会被修改
+  print("深拷贝字典:", deep_copy_dict)
+  
+  # 输出：
+  # 原始列表: [1, 2, [3, 4]]
+  # 深拷贝列表: [1, 2, [3, 4]]
+  # 修改深拷贝副本：
+  # 原始列表: [1, 2, [3, 4]]
+  # 深拷贝列表: [1, 2, [99, 4]]
+  # 原始字典: {'a': 1, 'b': {'x': 10, 'y': 20}}
+  # 深拷贝字典: {'a': 1, 'b': {'x': 10, 'y': 20}}
+  # 修改深拷贝副本：
+  # 原始字典: {'a': 1, 'b': {'x': 10, 'y': 20}}
+  # 深拷贝字典: {'a': 1, 'b': {'x': 50, 'y': 20}}
+  ```
+
+【注意】深拷贝会创建一个新的对象，并递归地拷贝对象内部的所有元素。因此，修改深拷贝的元素不会影响原始对象。
+
+### 24.3 拷贝自定义对象
+
+对于自定义对象，浅拷贝和深拷贝的行为会有所不同，特别是当对象包含其他可变对象时。可以通过实现 __copy__ 和 __deepcopy__ 方法来控制自定义类的拷贝行为。
+
+**示例：自定义类的拷贝**
+
+  ```python
+  import copy
+  
+  class MyClass:
+      def __init__(self, value):
+          self.value = value
+          self.list = [1, 2, 3]
+  
+      def __copy__(self):
+          new_obj = type(self)(self.value)
+          new_obj.list = self.list  # 浅拷贝
+          return new_obj
+  
+      def __deepcopy__(self, memo):
+          new_obj = type(self)(self.value)
+          new_obj.list = copy.deepcopy(self.list, memo)  # 深拷贝
+          return new_obj
+  
+  # 创建对象
+  obj1 = MyClass(10)
+  
+  # 浅拷贝
+  obj2 = copy.copy(obj1)
+  
+  # 深拷贝
+  obj3 = copy.deepcopy(obj1)
+  
+  # 修改 obj2 中的 list
+  obj2.list[0] = 99
+  
+  print(f"obj1.list: {obj1.list}")  # 输出: [99, 2, 3]（因为是浅拷贝）
+  print(f"obj2.list: {obj2.list}")  # 输出: [99, 2, 3]
+  print(f"obj3.list: {obj3.list}")  # 输出: [1, 2, 3]（因为是深拷贝）
+  ```
+
+### 24.4 拷贝与引用的区别
+
+* 引用：如果将一个对象赋值给另一个变量（例如 a = b），那么 a 和 b 共享同一个对象。对其中一个的修改会影响另一个。  
+* 拷贝：拷贝创建一个新的对象。浅拷贝和深拷贝的区别在于，浅拷贝只拷贝对象的最外层，而深拷贝会拷贝整个对象，包括所有嵌套的对象。  
+  * 浅拷贝：创建一个新的对象，但对象内部的可变元素的引用会被拷贝，修改这些内部元素会影响原对象;  
+  * 深拷贝：创建一个完全独立的新对象，包括递归拷贝所有的嵌套元素，修改深拷贝不会影响原对象;  
+  
+**示例：引用与拷贝**  
+
+  ```python
+  a = [1, 2, 3]
+  b = a  # 引用
+  c = a.copy()  # 浅拷贝
+  
+  a[0] = 99
+  print("a:", a)  # 输出: [99, 2, 3]
+  print("b:", b)  # 输出: [99, 2, 3], 由于 b 引用的是 a
+  print("c:", c)  # 输出: [1, 2, 3], 由于 c 是 a 的拷贝
+  ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

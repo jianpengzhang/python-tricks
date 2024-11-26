@@ -102,3 +102,4 @@
   * [21.6 更多接口说明](docs/python_features.md#216-更多接口说明)
 * [22 lambda 函数](docs/python_features.md#22-lambda-函数)
 * [23 函数式编程](docs/python_features.md#23-函数式编程)
+* [24 Python里的拷贝](docs/python_features.md#24-python里的拷贝)
