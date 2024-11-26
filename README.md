@@ -104,4 +104,6 @@
 * [23 函数式编程](docs/python_features.md#23-函数式编程)
 * [24 Python里的拷贝](docs/python_features.md#24-python里的拷贝)
 * [25 垃圾回收机制](docs/python_features.md#25-垃圾回收机制)
-* [26 python3 中 is, is not ,==, != 的区别](docs/python_features.md#26-python3-中-is-is-not---的区别) 
+* [26 python3 中 is, is not ,==, != 的区别](docs/python_features.md#26-python3-中-is-is-not---的区别)
+* [27 read,readline和readlines](docs/python_features.md#27-readreadline和readlines)
+
