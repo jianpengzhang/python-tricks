@@ -103,3 +103,4 @@
 * [22 lambda 函数](docs/python_features.md#22-lambda-函数)
 * [23 函数式编程](docs/python_features.md#23-函数式编程)
 * [24 Python里的拷贝](docs/python_features.md#24-python里的拷贝)
+* [25 垃圾回收机制](docs/python_features.md#25-垃圾回收机制)
