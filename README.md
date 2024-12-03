@@ -107,3 +107,7 @@
 * [26 python3 中 is, is not ,==, != 的区别](docs/python_features.md#26-python3-中-is-is-not---的区别)
 * [27 read,readline和readlines](docs/python_features.md#27-readreadline和readlines)
 
+### Python 力扣题
+*** 
+* [1 力扣题](docs/python_leetcode.md#1-力扣题)
+  * [1.1 两数之和](docs/python_leetcode.md#11-两数之和)
