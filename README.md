@@ -106,8 +106,11 @@
 * [25 垃圾回收机制](docs/python_features.md#25-垃圾回收机制)
 * [26 python3 中 is, is not ,==, != 的区别](docs/python_features.md#26-python3-中-is-is-not---的区别)
 * [27 read,readline和readlines](docs/python_features.md#27-readreadline和readlines)
+* [28 数据结构](docs/python_features.md#28-数据结构)
+  * [28.1 链表（Linked List）](docs/python_features.md#281-链表linked-list)
 
-### Python 力扣题
+
+### ✨  Python 力扣题
 *** 
 * [1 力扣题](docs/python_leetcode.md#1-力扣题)
   * [1.1 两数之和](docs/python_leetcode.md#11-两数之和)

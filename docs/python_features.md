@@ -12521,7 +12521,301 @@ with open('example.txt', 'r') as file:
 - **`readline()`**：逐行读取，适用于需要按行处理文件的情况。
 - **`readlines()`**：将文件的所有行读取到一个列表中，适用于需要操作文件所有行的场景。
 
+## 28. 数据结构
 
+### 28.1 链表（Linked List）
+
+链表是一种线性数据结构，由一系列节点组成，每个节点包含两个部分：数据部分和指向下一个节点的指针。链表的优势是插入和删除操作较为高效，不需要移动大量元素。链表的类型有单向链表、双向链表和循环链表。
+
+**基本概念：**  
+链表（Linked List）是一种由节点构成的线性数据结构，其中每个节点包含两个部分：  
+  * 数据域：存储数据；
+  * 指针域：存储下一个节点的地址（或引用）；
+
+**链表类型：**  
+  * 单向链表（Singly Linked List）：每个节点只包含指向下一个节点的指针，最后一个节点的指针为 None，表示链表结束；
+  * 双向链表（Doubly Linked List）：每个节点包含两个指针：一个指向下一个节点，另一个指向上一个节点。这样可以从链表的两端进行遍历；
+  * 循环链表（Circular Linked List）：链表的最后一个节点指向头节点，形成一个环状结构。循环链表可以是单向的，也可以是双向的；
+
+**链表操作**  
+  * 插入节点：可以在头部、尾部或中间位置插入节点；
+  * 删除节点：删除头部、尾部或中间位置的节点；
+  * 查找节点：通过遍历链表查找特定的节点；
+  * 修改节点：根据索引或节点数据修改节点的值；
+  * 遍历链表：访问每个节点的数据；
+
+**链表优缺点**  
+  * 优点：  
+    * 动态大小，不需要预先分配内存； 
+    * 插入和删除操作效率高，特别是在链表的头部或中间；  
+
+  * 缺点：  
+    * 访问元素需要遍历，查找元素的时间复杂度为 O(n)；  
+    * 相比于数组，内存利用率较低（每个节点需要额外的指针存储空间）；  
+
+#### 28.1.1 单向链表（Singly Linked List）
+
+单向链表是最简单的链表类型。每个节点包含两部分：      
+
+  * 数据域（Data）：存储节点的数据；  
+  * 指针域（Next）：存储指向下一个节点的指针；  
+  
+**特点：**  
+  * 只能从头节点向后遍历；  
+  * 插入和删除操作较为高效，尤其是头部和中间的操作；  
+  * 需要O(n)的时间复杂度来访问节点（通过遍历）；  
+
+**示例：**  
+
+```python
+class Node:
+    """
+    表示链表中的一个节点，包含 data（存储数据）和 next（指向下一个节点的引用）属性
+    """
+    def __init__(self, data):
+        self.data = data  # 节点的数据
+        self.next = None  # 指向下一个节点的指针
+
+class SinglyLinkedList:
+    """
+    表示整个链表，提供了插入、删除、查找和打印链表的功能
+    """
+    def __init__(self):
+        self.head = None  # 链表的头节点
+
+    def insert_at_head(self, data):
+        """在头部插入一个节点"""
+        new_node = Node(data)
+        new_node.next = self.head  # 新节点指向当前头节点
+        self.head = new_node  # 更新头节点
+
+    def insert_at_tail(self, data):
+        """在尾部插入一个节点"""
+        new_node = Node(data)
+        if not self.head:  # 如果链表为空
+            self.head = new_node
+            return
+        last = self.head
+        while last.next:  # 找到最后一个节点
+            last = last.next
+        last.next = new_node  # 最后一个节点的next指向新节点
+
+    def delete_node(self, key):
+        """删除特定值节点"""
+        temp = self.head
+        if temp and temp.data == key:  # 如果头节点是删除目标节点
+            self.head = temp.next
+            temp = None
+            return
+
+        # 查找要删除的节点
+        prev = None
+        while temp and temp.data != key:
+            prev = temp
+            temp = temp.next
+        if not temp:  # 未找到目标节点
+            return
+        prev.next = temp.next  # 删除节点
+        temp = None
+
+    # 查找一个节点
+    def search(self, key):
+        temp = self.head
+        while temp:
+            if temp.data == key:
+                return True
+            temp = temp.next
+        return False
+
+    def print_list(self):
+        """遍历并打印链表"""
+        temp = self.head
+        while temp:
+            print(temp.data, end=" -> ")
+            temp = temp.next
+        print("None")
+
+# 示例：使用链表
+linked_list = SinglyLinkedList()
+
+# 插入节点
+linked_list.insert_at_head(10)
+linked_list.insert_at_head(20)
+linked_list.insert_at_tail(30)
+linked_list.print_list()  # 输出: 20 -> 10 -> 30 -> None
+
+# 删除节点
+linked_list.delete_node(10)
+linked_list.print_list()  # 输出: 20 -> 30 -> None
+
+# 查找节点
+print(linked_list.search(20))  # 输出: True
+print(linked_list.search(40))  # 输出: False
+```
+
+#### 28.1.2 双向链表 (Doubly Linked List)
+
+双向链表比单向链表更复杂。每个节点包含三个部分：  
+* 数据域（Data）：存储节点的数据；
+* 指向下一个节点的指针（Next）；
+* 指向上一个节点的指针（Prev）；
+
+**特点：**  
+* 可以从头节点或尾节点双向遍历；
+* 插入和删除操作更加灵活，可以从任意位置（头部、尾部、任意节点）进行高效操作；
+* 需要更多的内存，因为每个节点有两个指针；
+
+**示例代码：**  
+
+```python
+class DoublyNode:
+    def __init__(self, data):
+        self.data = data  # 节点的数据
+        self.next = None  # 指向下一个节点的指针
+        self.prev = None  # 指向上一个节点的指针
+
+class DoublyLinkedList:
+    def __init__(self):
+        self.head = None  # 链表的头节点
+
+    def insert_at_head(self, data):
+        """在头部插入一个节点"""
+        new_node = DoublyNode(data)
+        if self.head:
+            self.head.prev = new_node
+        new_node.next = self.head  # 新节点指向当前头节点
+        self.head = new_node  # 更新头节点
+
+    def insert_at_tail(self, data):
+        """在尾部插入一个节点"""
+        new_node = DoublyNode(data)
+        if not self.head:  # 如果链表为空
+            self.head = new_node
+            return
+        last = self.head
+        while last.next:  # 找到最后一个节点
+            last = last.next
+        last.next = new_node  # 最后一个节点的next指向新节点
+        new_node.prev = last  # 新节点的prev指向当前的最后一个节点
+
+    def delete_node(self, key):
+        """删除指定值的节点"""
+        temp = self.head
+        if temp and temp.data == key:  # 如果要删除的是头节点
+            self.head = temp.next
+            if self.head:
+                self.head.prev = None
+            temp = None
+            return
+        while temp:
+            if temp.data == key:  # 找到目标节点
+                temp.prev.next = temp.next
+                if temp.next:
+                    temp.next.prev = temp.prev
+                temp = None
+                return
+            temp = temp.next
+
+    def print_list(self):
+        """正向遍历并打印链表"""
+        temp = self.head
+        while temp:
+            print(temp.data, end=" <-> ")
+            temp = temp.next
+        print("None")
+
+# 示例使用
+doubly_linked_list = DoublyLinkedList()
+doubly_linked_list.insert_at_head(10)
+doubly_linked_list.insert_at_head(20)
+doubly_linked_list.insert_at_tail(30)
+doubly_linked_list.print_list()  # 20 <-> 10 <-> 30 <-> None
+doubly_linked_list.delete_node(10)
+doubly_linked_list.print_list()  # 20 <-> 30 <-> None
+```
+
+#### 28.1.3 循环链表 (Circular Linked List)
+
+循环链表的特点是链表的最后一个节点指向头节点，形成一个闭环。循环链表可以是单向的，也可以是双向的。  
+
+* 单向循环链表：每个节点指向下一个节点，最后一个节点指向头节点；  
+* 双向循环链表：每个节点有两个指针，一个指向下一个节点，另一个指向上一个节点，最后一个节点指向头节点，头节点指向最后一个节点；  
+
+**特点：**  
+* 没有明确的“末尾”节点，可以从任意位置开始循环遍历；
+* 常用于需要循环访问的数据结构，如约瑟夫问题；
+
+**示例代码：单向循环链表**   
+
+```python
+class CircularNode:
+    def __init__(self, data):
+        self.data = data  # 节点的数据
+        self.next = None  # 指向下一个节点的指针
+
+class CircularLinkedList:
+    def __init__(self):
+        self.head = None  # 链表的头节点
+
+    def insert_at_head(self, data):
+        """在头部插入一个节点"""
+        new_node = CircularNode(data)
+        if not self.head:
+            self.head = new_node
+            new_node.next = self.head  # 第一个节点指向自己
+        else:
+            last = self.head
+            while last.next != self.head:  # 遍历到最后一个节点
+                last = last.next
+            last.next = new_node
+            new_node.next = self.head  # 新节点指向头节点
+            self.head = new_node  # 更新头节点
+
+    def delete_node(self, key):
+        """删除指定值的节点"""
+        temp = self.head
+        if temp and temp.data == key:  # 如果要删除的是头节点
+            if temp.next == self.head:  # 如果只有一个节点
+                self.head = None
+            else:
+                last = self.head
+                while last.next != self.head:  # 找到最后一个节点
+                    last = last.next
+                last.next = temp.next  # 将最后一个节点的next指向头节点的下一个节点
+                self.head = temp.next  # 更新头节点
+            temp = None
+            return
+        while temp:
+            if temp.data == key:
+                prev = temp
+                prev.next = temp.next
+                temp = None
+                return
+            temp = temp.next
+            if temp == self.head:  # 遍历到头节点，结束循环
+                break
+
+    def print_list(self):
+        """打印循环链表"""
+        if not self.head:
+            print("Empty list")
+            return
+        temp = self.head
+        while True:
+            print(temp.data, end=" -> ")
+            temp = temp.next
+            if temp == self.head:  # 回到头节点时停止
+                break
+        print("")
+
+# 示例使用
+circular_linked_list = CircularLinkedList()
+circular_linked_list.insert_at_head(10)
+circular_linked_list.insert_at_head(20)
+circular_linked_list.print_list()  # 20 -> 10 -> 
+circular_linked_list.delete_node(10)
+circular_linked_list.print_list()  # 20 ->
+```
 
 扩展阅读：  
 (1) [Python List](https://www.jianshu.com/p/J4U6rR)
