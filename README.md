@@ -112,5 +112,6 @@
 
 ### ✨  Python 力扣题
 *** 
-* [1 力扣题](docs/python_leetcode.md#1-力扣题)
+* [1. 力扣（Leetcode）题](docs/python_leetcode.md#1-力扣leetcode题)
   * [1.1 两数之和](docs/python_leetcode.md#11-两数之和)
+  * [1.2 合并两个有序链表](docs/python_leetcode.md#12-合并两个有序链表)
